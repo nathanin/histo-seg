@@ -58,14 +58,14 @@ def check_white(tile, cutoff = 225, pct = 0.5):
 
 
 def write_tile(tile, filename, writesize, normalize):
-    # Needed for Inference mode ***
+    # Needed for inference by SegNet
     tile = cv2.cvtColor(tile, cv2.COLOR_RGBA2RGB) # ???
     tile = tile[:,:,(2,1,0)] # ???
-    #tile = cv2.resize(tile, dsize = (writesize, writesize)) # Before norm; for speed??
 
-    tile = cv2.resize(tile, dsize = (writesize, writesize)) # Before norm; for speed??
+    #tile = cv2.resize(tile, dsize = (writesize, writesize)) # Before norm; for speed??
     if normalize:
         tile = cnorm.normalize(image = tile, target = None, verbose = False)
+    tile = cv2.resize(tile, dsize = (writesize, writesize)) # Before norm; for speed??
    
     cv2.imwrite(filename = filename, img = tile)
 
@@ -304,11 +304,21 @@ def load_block(pth, place_size, overlap, interp = cv2.INTER_NEAREST):
     # process overlapping borders...
     # 1. Upsample block to be place_size + 2*overlap
     # 2. Cut out the middle bit
+    #print "Block: {}".format(pth),
+    
     upsample = place_size + 2*overlap
+    #print "Upsampling to: {}".format(upsample) 
     block = cv2.imread(pth)
     block = cv2.resize(block, dsize = (upsample, upsample), interpolation = interp)
 
     return block[overlap : overlap + place_size, overlap : overlap + place_size, :]
+
+
+def overlay_colors(img, block):
+    img = np.add(img*0.4, block*0.6)
+    img = cv2.convertScaleAbs(img)
+
+    return img
 
 
 def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
@@ -333,9 +343,9 @@ def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
             if do_overlay:
             # TODO fix the hard-coded "tile" prefix and extension suffix: 
                 ov_pth = os.path.join(overlay_dir, 'tile{}.jpg'.format(r))
-                img = load_block(ov_pth, place_size, overlap)
-                img = cv2.resize(img, dsize = (place_size, place_size))
-                block = color_image(img, block)
+                ov_img = load_block(ov_pth, place_size, overlap)
+                ov_img = cv2.resize(ov_img, dsize = (place_size, place_size))
+                block = overlay_colors(ov_img, block)
 
         row_out = np.append(row_out, block, axis=1) # Sketchhyyyy
 
@@ -389,6 +399,10 @@ def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w 
 
 # TODO this function isn't very good. the place to generalize isn't really obvious to me. 
 def assemble(exp_home, sources, writesize, overlap, overlay):
+    
+    # Force sources to be a list:
+    if isinstance(sources, basestring):
+        sources = [sources]
 
     # Pull in the image map:
     map_file = os.path.join(exp_home, 'data_tilemap.npy')
@@ -400,8 +414,8 @@ def assemble(exp_home, sources, writesize, overlap, overlay):
 
     overlay_dir = ''
     if overlay:
-        # Assume sources[0] is the tile directory
-        overlay_dir = os.path.join(exp_home, sources[0])
+        # Tiles overlaid onto tiles should work fine.
+        overlay_dir = os.path.join(exp_home, 'tiles')
 
     for index, reg in enumerate(regions):
         # TODO this loop still sucks

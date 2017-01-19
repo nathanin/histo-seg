@@ -11,7 +11,7 @@ import cv2
 import inspect
 import numpy as np
 
-CAFFE_ROOT = '/Users/nathaning/caffe-segnet-segnet-cleaned'
+CAFFE_ROOT = '/Users/nathaning/caffe-segnet-cudnn5'
 sys.path.insert(0, CAFFE_ROOT+"/python") 
 import caffe
 
@@ -47,7 +47,7 @@ def define_colors(n = 4):
 
     label_colors = np.array([c1, c2, c3, c4])
 
-    return label_names
+    return label_colors
 
 def list_imgs(pth = '.', ext = 'jpg'):
     search = os.path.join(pth, '*.{}'.format(ext))
@@ -110,13 +110,29 @@ def impose_colors(label, colors):
     rgb[:,:,0] = b
     return rgb 
 
-def get_output(d, net):
+def get_output(d, net, colors):
+    '''
+    This is the collection of if's that controls what gets passed back/written out
+
+    These functions are still really pipeliney.
+
+    If I ever want new types of output, this is a good place to start implementing that.
+
+    The keys are passed through the whole pipeline.py as distinct folders
+    I could say, I want prob3 - meaning the probability image from class #3 
+    That would totally work.
+
+    Figure out a new type of overlay function for the cases like prob, and single class
+    labels that make the most sense as 2D arrays; no 3rd dimension (impose_colors won't work). 
+    '''
     pred = net.blobs['prob'].data
     out = np.squeeze(pred[0,:,:,:]) # i.e first image, if a stack
     
     out = np.argmax(out, axis=0) # argmax classifier ; can change
     if d == 'debug':
-        x = cv2.imread(img)
+        x = net.blobs['data'].data
+        x = np.swapaxes(x, 0, 2)
+        #x = cv2.imread(img)
         x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)
     elif d == "result":
         ## Main result ~ label matrix
@@ -127,10 +143,17 @@ def get_output(d, net):
     elif d == "label":
         ## Same as probability; might have to add an argument
         pass
-    return net, out
+    else:
+        x = out
+
+    return x
 
 # Default to CPU
 def process(exphome, source, dest, model_template, weights, mode = 1):
+    
+    # Force dest to be a list
+    if isinstance(dest, basestring):
+        dest = [dest]
 
     listfile = write_list_densedata(source, exphome)
     model = substitute_img_list(model_template, exphome, listfile)
@@ -150,14 +173,15 @@ def process(exphome, source, dest, model_template, weights, mode = 1):
             print 'Histoseg processing img {} / {}'.format(i, len(imgs))
         
         # Run the network forward once i.e process one image
-        net, out = inference(net)
-       
+        _ = net.forward() 
+        
         ## Iterate through the list of directories and write in appropriate outputs:
         write_name = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
         for d in dest:
             write_name = os.path.join(d, write_name)
-
-            x = get_output(d, net)
+            #print write_name
+            _, d = os.path.split(d)
+            x = get_output(d, net, colors)
             ## For debug
 
             cv2.imwrite(filename = write_name, img = x)
