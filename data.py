@@ -187,7 +187,8 @@ def find_bcg(wsi):
 def training():
     pass # make_data.py
 
-def create_dirs_inference(filename, writeto, sub_dirs = ['tiles', 'result', 'labels', 'prob'], remove = False):
+def create_dirs_inference(filename, writeto, 
+    sub_dirs = ['tiles', 'result', 'labels', 'prob'], remove = False):
     tail = os.path.basename(filename)
     slide_name, ex = os.path.splitext(tail)
     result_root = os.path.join(writeto, slide_name)
@@ -350,6 +351,7 @@ def build_region(region, m, source_dir, place_size, overlay_dir, max_w = 10000):
 
 
 # TODO this function isn't very good. the place to generalize isn't really obvious to me. 
+# tile_sources is dir name, and must exist under result_root
 def assemble(result_root, tile_sources = ['result', 'labels', 'prob'],
         interps = [cv2.INTER_LINEAR, cv2.INTER_NEAREST, cv2.INTER_LINEAR],
         img_overlay = ['x', 'x', 'x']):
