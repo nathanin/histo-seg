@@ -9,10 +9,11 @@ import sys
 import glob
 import cv2
 import inspect
+import numpy as np
 
-#CAFFE_ROOT = '/Users/nathaning/caffe'
-#sys.path.insert(0, CAFFE_ROOT+"/python") 
-#import caffe
+CAFFE_ROOT = '/Users/nathaning/caffe-segnet-segnet-cleaned'
+sys.path.insert(0, CAFFE_ROOT+"/python") 
+import caffe
 
 # Define inspection code that spits out the line it's called from (as str)
 def PrintFrame():

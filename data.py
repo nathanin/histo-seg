@@ -153,7 +153,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     written = 0
     for index, coords in enumerate(lst):
         if index % 100 == 0:
-            print "{} / {} ({} written so far)".format(index, ntiles, written)
+            print "{:05d} / {:05d} ({} written so far)".format(index, ntiles, written)
         # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
         [y, x] = coords
 
@@ -198,10 +198,10 @@ def multiply_data(targets):
 def find_bcg(wsi):
     pass # make_data.py
 
-def training():
+def make_training():
     pass # make_data.py
 
-def create_dirs_inference(filename, writeto, sub_dirs = ['tiles', 'result', 'labels', 'prob'], remove = False):
+def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
     tail = os.path.basename(filename)
     slide_name, ex = os.path.splitext(tail)
     exp_home = os.path.join(writeto, slide_name)
@@ -210,13 +210,12 @@ def create_dirs_inference(filename, writeto, sub_dirs = ['tiles', 'result', 'lab
         shutil.rmtree(exp_home)
         os.makedirs(exp_home)
 
-    create_dirs = [os.path.join(exp_home, d) for d in sub_dirs]
-    if not os.path.exists(create_dirs[0]):
-        _ = [os.makedirs(d) for d in create_dirs]
+    created_dirs = [os.path.join(exp_home, d) for d in sub_dirs]
+    if not os.path.exists(created_dirs[0]):
+        _ = [os.makedirs(d) for d in created_dirs]
 
-    create_dirs.append(exp_home)
 
-    return create_dirs
+    return exp_home, created_dirs
 
 
 # New: adding overlap option
@@ -226,9 +225,10 @@ Method for overlapping:
     - Add overlap to tilesize in both dims
     - Writesize remains 256; that's what the network wants. (change this by not being dum)
 '''
-def make_inference(filename, writeto, tilesize = 512, writesize = 256, overlap = 0, remove_first = False):
-    created_dirs = create_dirs_inference(filename, writeto, remove = remove_first) 
-    tiledir , resultdir, labeldir, probdir, exp_home = created_dirs 
+def make_inference(filename, writeto, create, tilesize = 512, writesize = 256, overlap = 0, remove_first = False):
+    
+    exp_home, created_dirs = create_dirs_inference(filename, writeto, sub_dirs = create, remove = remove_first) 
+    tiledir = created_dirs[0]
     for d in created_dirs:
         print "Created: {}".format(d)
 
@@ -250,7 +250,7 @@ def make_inference(filename, writeto, tilesize = 512, writesize = 256, overlap =
 
     #listfile = write_list_densedata(tiledir, exp_home)
 
-    return tiledir, exp_home, created_dirs
+    return tiledir, exp_home, created_dirs[1:]
 
 
 
@@ -300,21 +300,19 @@ def empty_block(place_size):
     return np.zeros(shape = (place_size, place_size, 3), dtype = np.uint8)
 
 
-def load_block(pth, place_size, overlap):
+def load_block(pth, place_size, overlap, interp = cv2.INTER_NEAREST):
     # process overlapping borders...
     # 1. Upsample block to be place_size + 2*overlap
     # 2. Cut out the middle bit
     upsample = place_size + 2*overlap
     block = cv2.imread(pth)
-    block = cv2.resize(block, dsize = (upsample, upsample))
+    block = cv2.resize(block, dsize = (upsample, upsample), interpolation = interp)
 
     return block[overlap : overlap + place_size, overlap : overlap + place_size, :]
 
 
 def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
     do_overlay = os.path.exists(overlay_dir)
-    #print PrintFrame(),
-    #print "do_overlay = {}".format(do_overlay)
 
     #TODO See if we can do it without initializing with empty col on the left :
     row_out = empty_block(place_size)
@@ -325,7 +323,6 @@ def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
             # TODO fix the hard-coded "tile" prefix and extension suffix: 
             pth = os.path.join(source_dir, 'tile{}.png'.format(r))
 
-            #block = cv2.imread(pth)
             block = load_block(pth, place_size, overlap)
 
             if block is None:
@@ -333,13 +330,10 @@ def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
                 print "img {} ought to exist but I guess doesn't.".format(pth)
                 block = empty_block(place_size)
 
-            #block = cv2.resize(block, dsize = (place_size, place_size))
-
             if do_overlay:
             # TODO fix the hard-coded "tile" prefix and extension suffix: 
                 ov_pth = os.path.join(overlay_dir, 'tile{}.jpg'.format(r))
                 img = load_block(ov_pth, place_size, overlap)
-                #img = cv2.imread(ov_pth)
                 img = cv2.resize(img, dsize = (place_size, place_size))
                 block = color_image(img, block)
 
@@ -354,7 +348,7 @@ def assemble_rows(rows):
     return img
 
 
-def downsize_keep_ratio(img, target_w = 1024, interp = cv2.INTER_LINEAR):
+def downsize_keep_ratio(img, target_w = 1024, interp = cv2.INTER_NEAREST):
     factor = img.shape[1]/float(target_w)
     target_h = int(img.shape[0] / factor)
 
@@ -394,9 +388,7 @@ def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w 
 
 
 # TODO this function isn't very good. the place to generalize isn't really obvious to me. 
-def assemble(exp_home, tile_sources, writesize, overlap,
-        interps = [cv2.INTER_LINEAR, cv2.INTER_NEAREST, cv2.INTER_LINEAR],
-        img_overlay = ['x', 'x', 'x']):
+def assemble(exp_home, sources, writesize, overlap, overlay):
 
     # Pull in the image map:
     map_file = os.path.join(exp_home, 'data_tilemap.npy')
@@ -406,24 +398,24 @@ def assemble(exp_home, tile_sources, writesize, overlap,
     # Pull out disconnected regions that pass a size cutoff:
     regions = get_all_regions(m, threshold = 5)
 
+    overlay_dir = ''
+    if overlay:
+        # Assume sources[0] is the tile directory
+        overlay_dir = os.path.join(exp_home, sources[0])
+
     for index, reg in enumerate(regions):
         # TODO this loop still sucks
         #print PrintFrame(),"Processing region {}".format(index)
-        for tile_src, interp, overlay in zip(tile_sources, interps, img_overlay):
-            img_name = '{}_{:03d}.jpg'.format(tile_src, index) 
-            source_dir = os.path.join(exp_home, tile_src)
-            overlay_dir = os.path.join(exp_home, overlay)
+        for src in sources:
+            reg_name = '{}_{:03d}.jpg'.format(src, index) 
+            source_dir = os.path.join(exp_home, src)
+            
             print "Pulling images from {}".format(source_dir)
             print "Overlaying onto {}".format(overlay_dir)
 
             img = build_region(reg, m, source_dir, writesize, overlap, overlay_dir) 
             
-            img_name = os.path.join(exp_home,img_name)
-            cv2.imwrite(img_name, img)
-
-
-
-
-
+            reg_name = os.path.join(exp_home, reg_name)
+            cv2.imwrite( reg_name, img )
 
 
