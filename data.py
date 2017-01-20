@@ -49,8 +49,9 @@ def pull_svs_stats(svs):
         return 1, level_dims[1]
 
 
-def check_white(tile, cutoff = 225, pct = 0.5):
-    # True if tile > cutoff is less than pct
+def check_white(tile, cutoff = 225, pct = 0.25):
+    # True if the tile is mostly non-white
+    # Lower pct ~ more strict
     gray = cv2.cvtColor(tile, cv2.COLOR_RGBA2GRAY)
     white = (gray > cutoff).sum() / float(gray.size)
 
@@ -62,10 +63,10 @@ def write_tile(tile, filename, writesize, normalize):
     tile = cv2.cvtColor(tile, cv2.COLOR_RGBA2RGB) # ???
     tile = tile[:,:,(2,1,0)] # ???
 
-    #tile = cv2.resize(tile, dsize = (writesize, writesize)) # Before norm; for speed??
+    tile = cv2.resize(tile, dsize = (writesize, writesize), interpolation = cv2.INTER_LINEAR) # Before norm; for speed??
     if normalize:
         tile = cnorm.normalize(image = tile, target = None, verbose = False)
-    tile = cv2.resize(tile, dsize = (writesize, writesize)) # Before norm; for speed??
+    #tile = cv2.resize(tile, dsize = (writesize, writesize), interpolation = cv2.INTER_LINEAR) # Before norm; for speed??
    
     cv2.imwrite(filename = filename, img = tile)
 
@@ -104,11 +105,8 @@ Maybe there's a performance curve depending on the tile size, or just the number
 which is a function of tile size, and the total image size. IDK.
 
 Maybe it doesn't matter. It's just bothering me. 
-'''
 
-def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
-    '''
-    Reworked version from tile_wsi.py
+Reworked version from tile_wsi.py
 
     nrow 0) = nrow(lvl)
     y(0) = factor * y(lvl) ---> factor = y(0) / y(lvl)
@@ -116,21 +114,24 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     tilesize(0) = y(0) * tilesize(lvl) / y(lvl) (EQ 1)
 
     Remove logging functions and max_tile functions
-    '''
+'''
+
+def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
 
     lvl20x, dim20x = pull_svs_stats(wsi)
 
     resize_factor = int(wsi.level_downsamples[lvl20x]) # 1 if the slide is 20x
     
-    # Ratio the requested tilesize (w.r.t. 20X) back to the top-level in the file. 
+    # tilesize and overlap given w.r.t. 20X
     dims_top = wsi.level_dimensions[0]
     tile_top = int(dims_top[0] * tilesize / dim20x[0] / np.sqrt(resize_factor)) # (EQ 1)
-    overlap20x = int(overlap / np.sqrt(resize_factor))
+    overlap_top = int(overlap * np.sqrt(resize_factor))
 
+    print "Output from : ", PrintFrame()
     print "tilesize w.r.t. level 0 = {}".format(tile_top)
     print "tilesize w.r.t. 20x (level {}) = {}".format(lvl20x, tilesize)
-    print "Overlap value w.r.t. level 0 = {}".format(overlap)
-    print "Overlap value w.r.t. 20x (level {}) = {}".format(lvl20x, overlap20x)
+    print "Overlap value w.r.t. level 0 = {}".format(overlap_top)
+    print "Overlap value w.r.t. 20x (level {}) = {}".format(lvl20x, overlap)
 
     # Whole numbers of tiles: (ASSUME tiles are always square ~~~ )
     nrow = dims_top[1] / tile_top
@@ -147,9 +148,11 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
 
 
     # TODO: add chuck read's and low-res whitespace mapping
+    print ""
     print "Populating tilemap"
     print "Created a {} row by {} col lattice over the image".format(nrow, ncol)
-    print "Pulling out squares side length = {}".format(tilesize)
+    print "Pulling out squares side length = {}".format(tilesize + 2*overlap)
+    print "Writing into {} squares".format(writesize)
     written = 0
     for index, coords in enumerate(lst):
         if index % 100 == 0:
@@ -157,16 +160,16 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
         # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
         [y, x] = coords
 
-        name = '{}{}.jpg'.format(prefix, index)
+        name = '{}{:05d}.jpg'.format(prefix, index)
 
-        # OVERLAP OPTION #1: Change here the values for tilesize
-        tile = wsi.read_region(location = (x*tile_top - overlap, y*tile_top - overlap), 
+        tile = wsi.read_region(location = (x*tile_top - overlap_top, y*tile_top - overlap_top), 
                 level = lvl20x, 
-                size =(tilesize + 2*overlap, tilesize + 2*overlap)) # size= () may be w.r.t. the target level...
+                size =(tile_top + 2*overlap_top, tile_top + 2*overlap_top)) 
+        # size= () may be w.r.t. the level...
+        
         # tile is a PIL.Image:
         tile = np.array(tile)
 
-        # OVERLAP OPTION #2: Here, just pad the tile before shrinking
 
         # Decide if the tile is white: If OK, then write it
         if check_white(tile):
@@ -240,6 +243,7 @@ def make_inference(filename, writeto, create, tilesize = 512, writesize = 256, o
     print "Tilesize: {}".format(tilesize)
     print "Write size: {}".format(writesize)
     print "Overlap: {}".format(overlap)
+    print " ------------- /Settings"
     tilemap = tile_wsi(wsi, tilesize, writesize, tiledir, overlap, prefix = 'tile')
 
     # Write out map file as npy
@@ -300,18 +304,26 @@ def empty_block(place_size):
     return np.zeros(shape = (place_size, place_size, 3), dtype = np.uint8)
 
 
-def load_block(pth, place_size, overlap, interp = cv2.INTER_NEAREST):
+def load_block(pth, place_size, overlap, interp = cv2.INTER_LINEAR):
     # process overlapping borders...
     # 1. Upsample block to be place_size + 2*overlap
-    # 2. Cut out the middle bit
+    # 2. Cut out the middle part
     #print "Block: {}".format(pth),
-    
-    upsample = place_size + 2*overlap
-    #print "Upsampling to: {}".format(upsample) 
+   
     block = cv2.imread(pth)
-    block = cv2.resize(block, dsize = (upsample, upsample), interpolation = interp)
+    ds_size = block.shape[0]
 
-    return block[overlap : overlap + place_size, overlap : overlap + place_size, :]
+    content = ds_size - 2*overlap
+    block = block[overlap : -overlap, overlap : -overlap, :]
+
+    #upsample = overlap*upsample_ratio*2 + content
+
+    block = cv2.resize(block, dsize = (place_size, place_size), interpolation = interp)
+
+    #overlap = overlap*upsample_ratio
+    #print "cutting block: {}".format([overlap, place_size])
+    #return block[overlap : -overlap , overlap : -overlap , :]
+    return block
 
 
 def overlay_colors(img, block):
@@ -331,7 +343,7 @@ def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
             block = empty_block(place_size)
         else:
             # TODO fix the hard-coded "tile" prefix and extension suffix: 
-            pth = os.path.join(source_dir, 'tile{}.png'.format(r))
+            pth = os.path.join(source_dir, 'tile{:05d}.png'.format(r))
 
             block = load_block(pth, place_size, overlap)
 
@@ -342,7 +354,7 @@ def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
 
             if do_overlay:
             # TODO fix the hard-coded "tile" prefix and extension suffix: 
-                ov_pth = os.path.join(overlay_dir, 'tile{}.jpg'.format(r))
+                ov_pth = os.path.join(overlay_dir, 'tile{:05d}.jpg'.format(r))
                 ov_img = load_block(ov_pth, place_size, overlap)
                 ov_img = cv2.resize(ov_img, dsize = (place_size, place_size))
                 block = overlay_colors(ov_img, block)
@@ -369,9 +381,12 @@ def downsize_keep_ratio(img, target_w = 1024, interp = cv2.INTER_NEAREST):
 
 def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w = 10000):
     x,y,w,h = region
-    
+   
+    print ""
     print PrintFrame(),
     print " x: {} y: {} w: {} h: {}".format(x,y,w,h)
+    print "Placing {} tiles".format(place_size)
+    print "Cutting off {} px border".format(overlap)
     # Check if the output will be large
     if w*h*(place_size**2) > (2**31)/3:
         # edit place_size so that the output will fit:
@@ -421,11 +436,11 @@ def assemble(exp_home, sources, writesize, overlap, overlay):
         # TODO this loop still sucks
         #print PrintFrame(),"Processing region {}".format(index)
         for src in sources:
-            reg_name = '{}_{:03d}.jpg'.format(src, index) 
+            reg_name = '{:03d}_{}.jpg'.format(index, src) 
             source_dir = os.path.join(exp_home, src)
             
-            print "Pulling images from {}".format(source_dir)
-            print "Overlaying onto {}".format(overlay_dir)
+            #print "Pulling images from {}".format(source_dir)
+            #print "Overlaying onto {}".format(overlay_dir)
 
             img = build_region(reg, m, source_dir, writesize, overlap, overlay_dir) 
             

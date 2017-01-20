@@ -11,13 +11,13 @@ import cv2
 import inspect
 import numpy as np
 
-CAFFE_ROOT = '/Users/nathaning/caffe-segnet-cudnn5'
+CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
 sys.path.insert(0, CAFFE_ROOT+"/python") 
 import caffe
 
 # Define inspection code that spits out the line it's called from (as str)
 def PrintFrame():
-    callerframercord = inspect.stack()[1] 
+    callerframerecord = inspect.stack()[1] 
     frame = callerframerecord[0]
     info = inspect.getframeinfo(frame)
     thisfile = info.filename
@@ -40,13 +40,19 @@ def define_colors(n = 4):
     # TODO !!!! INSERT A COLOR-WHEELY TYPE ALGORITHM:
     # Define a set of colors for visualization later
     ## screw it, for now:
-    c1 = [245, 32, 35]
-    c2 = [25, 242, 20]
-    c3 = [35, 35, 220]
-    c4 = [255, 255, 255]
 
-    label_colors = np.array([c1, c2, c3, c4])
+    # TODO migrate this to pipeline.py ; pass the color matrix through
+    c0 = [245, 32, 35] # red - g3
+    c1 = [25, 242, 20] # green - g4
+    c2 = [35, 35, 220] # blue - BN
+    c3 = [255, 255, 255] # white - ST
 
+    label_colors = np.array([c0, c1, c2, c3])
+
+    print ""
+    print PrintFrame()
+    print "Using colors:"
+    print label_colors
     return label_colors
 
 def list_imgs(pth = '.', ext = 'jpg'):
@@ -99,9 +105,9 @@ def impose_colors(label, colors):
 
     for i, l in enumerate(u_labels):
         bin_l = (label == l) # TODO add here tracking for how many of what class
-        r[bin_l] = colors[i, 0]
-        g[bin_l] = colors[i, 1]
-        b[bin_l] = colors[i, 2]
+        r[bin_l] = colors[l, 0]
+        g[bin_l] = colors[l, 1]
+        b[bin_l] = colors[l, 2]
 
     #TODO here fix so it just uses one cat to join r, g, and b
     rgb = np.zeros(shape = (label.shape[0], label.shape[1], 3), dtype = np.uint8)
@@ -110,7 +116,7 @@ def impose_colors(label, colors):
     rgb[:,:,0] = b
     return rgb 
 
-def get_output(d, net, colors):
+
     '''
     This is the collection of if's that controls what gets passed back/written out
 
@@ -124,27 +130,41 @@ def get_output(d, net, colors):
 
     Figure out a new type of overlay function for the cases like prob, and single class
     labels that make the most sense as 2D arrays; no 3rd dimension (impose_colors won't work). 
+
+    NEW procedure:
+    if none of the probs is > a cutoff, pick a default class.--
+
+        unsure = [p0 < cutoff and p1 < cutoff .... pn < cutoff]
+        label[unsure] = default
     '''
+def get_output(d, net, colors):
     pred = net.blobs['prob'].data
-    out = np.squeeze(pred[0,:,:,:]) # i.e first image, if a stack
+    out = np.squeeze(pred) # i.e first image, if a stack
     
-    out = np.argmax(out, axis=0) # argmax classifier ; can change
+    #out = np.argmax(out, axis=0) # argmax classifier ; can change
     if d == 'debug':
         x = net.blobs['data'].data
+        x = np.squeeze(x)
         x = np.swapaxes(x, 0, 2)
         #x = cv2.imread(img)
         x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)
+    
     elif d == "result":
         ## Main result ~ label matrix
-        x = impose_colors(out, colors)
-    elif d == "prob":
-        ## Figure out how to deal with which probability image to write in. 
-        pass
+        #print " doing result task"
+        labels = np.argmax(out, axis = 0)
+        x = impose_colors(labels, colors)
+    
+    elif "prob" in d:
+        layer = int(d[-1]) # TODO THIS IS SKEETTCCHHHYY
+        x = out[layer,:,:]*255 
+    
     elif d == "label":
         ## Same as probability; might have to add an argument
         pass
+    
     else:
-        x = out
+        x = np.argmax(out, axis = 0)
 
     return x
 
@@ -176,13 +196,13 @@ def process(exphome, source, dest, model_template, weights, mode = 1):
         _ = net.forward() 
         
         ## Iterate through the list of directories and write in appropriate outputs:
-        write_name = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
+        write_name_base = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
         for d in dest:
-            write_name = os.path.join(d, write_name)
-            #print write_name
+            write_name = os.path.join(d, write_name_base)
+            #print write_name, 
             _, d = os.path.split(d)
+            #print d, 
             x = get_output(d, net, colors)
-            ## For debug
 
             cv2.imwrite(filename = write_name, img = x)
             
