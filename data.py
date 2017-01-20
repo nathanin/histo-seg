@@ -49,7 +49,7 @@ def pull_svs_stats(svs):
         return 1, level_dims[1]
 
 
-def check_white(tile, cutoff = 225, pct = 0.25):
+def check_white(tile, cutoff = 215, pct = 0.75):
     # True if the tile is mostly non-white
     # Lower pct ~ more strict
     gray = cv2.cvtColor(tile, cv2.COLOR_RGBA2GRAY)
@@ -124,6 +124,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     
     # tilesize and overlap given w.r.t. 20X
     dims_top = wsi.level_dimensions[0]
+    #tile_top = int(dims_top[0] * tilesize / dim20x[0]) # (EQ 1)
     tile_top = int(dims_top[0] * tilesize / dim20x[0] / np.sqrt(resize_factor)) # (EQ 1)
     overlap_top = int(overlap * np.sqrt(resize_factor))
 
@@ -162,8 +163,9 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
 
         name = '{}{:05d}.jpg'.format(prefix, index)
 
+        # Decision: pull from level 0;
         tile = wsi.read_region(location = (x*tile_top - overlap_top, y*tile_top - overlap_top), 
-                level = lvl20x, 
+                level = 0, 
                 size =(tile_top + 2*overlap_top, tile_top + 2*overlap_top)) 
         # size= () may be w.r.t. the level...
         
@@ -174,7 +176,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
         # Decide if the tile is white: If OK, then write it
         if check_white(tile):
             filename = os.path.join(writeto, name)
-            write_tile(tile, filename, writesize, True)
+            write_tile(tile, filename, writesize, normalize = True)
 
             tilemap = update_map(tilemap, x, y, index)
             written += 1
@@ -268,11 +270,11 @@ def make_inference(filename, writeto, create, tilesize = 512, writesize = 256, o
     print "Working with slide {}".format(filename)
     
     # Echo the settings:
-    print "Settings _________"
+    print "\nSettings _________"
     print "Tilesize: {}".format(tilesize)
     print "Write size: {}".format(writesize)
     print "Overlap: {}".format(overlap)
-    print " ------------- /Settings"
+    print " ------------- end/Settings\n"
     tilemap = tile_wsi(wsi, tilesize, writesize, tiledir, overlap, prefix = 'tile')
 
     # Write out map file as npy
@@ -305,7 +307,7 @@ def label_regions(m):
     return ll, contours
     
 
-def get_all_regions(m, threshold = 40):
+def get_all_regions(m, threshold = 80):
     '''
     Spit out regions as bounding rects of connected components
     threshold is the number of tiles required (should be careful of large tilesizes)
@@ -356,7 +358,7 @@ def load_block(pth, place_size, overlap, interp = cv2.INTER_LINEAR):
 
 
 def overlay_colors(img, block):
-    img = np.add(img*0.4, block*0.6)
+    img = np.add(img*0.6, block*0.4)
     img = cv2.convertScaleAbs(img)
 
     return img
@@ -413,8 +415,8 @@ def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w 
    
     print PrintFrame(),
     print " x: {} y: {} w: {} h: {}".format(x,y,w,h)
-    print "Placing {} tiles".format(place_size)
-    print "Cutting off {} px border".format(overlap)
+    #print "Placing {} tiles".format(place_size)
+    #print "Cutting off {} px border".format(overlap)
     # Check if the output will be large
     if w*h*(place_size**2) > (2**31)/3:
         # edit place_size so that the output will fit:
@@ -470,7 +472,7 @@ def assemble(exp_home, sources, writesize, overlap, overlay):
             #print "Pulling images from {}".format(source_dir)
             #print "Overlaying onto {}".format(overlay_dir)
             print ""
-            print "Region source dir {}".format(src)
+            print "Region source dir {} ({} of {})".format(src, index+1, len(regions))
             img = build_region(reg, m, src, writesize, overlap, overlay_dir) 
             
             reg_name = os.path.join(exp_home, reg_name)

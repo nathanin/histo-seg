@@ -11,8 +11,8 @@ import cv2
 import inspect
 import numpy as np
 
-#CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
-CAFFE_ROOT = '/Users/nathaning/caffe-segnet-cudnn5'
+CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+#CAFFE_ROOT = '/Users/nathaning/caffe-segnet-cudnn5'
 sys.path.insert(0, CAFFE_ROOT+"/python") 
 import caffe
 
@@ -86,6 +86,7 @@ def write_list_densedata(source, saveto):
 
 
 def substitute_img_list(filename, saveto, listfile, target = 'PLACEHOLDER'):
+    # TODO Add support for placing in BATCHSIZE keyword
     f = open(filename, "r")
     data = f.read()
     f.close()
@@ -141,6 +142,8 @@ def impose_colors(label, colors):
         label[unsure] = default
     '''
 def get_output(d, net, colors):
+    # TODO Add support for BATCHSIZE > 1
+
     pred = net.blobs['prob'].data
     out = np.squeeze(pred) # i.e first image, if a stack
     

@@ -7,12 +7,11 @@ import os
 import data
 import histoseg
 import shutil
-import argparse
 
 
 def run_histoseg(exphome, source, dest, weights, model_template, mode, GPU_ID):
     ## Echo inputs
-    print "Running histoseg.process: "
+    print "\nRunning histoseg.process: "
     print "Source: {}".format(source)
     print "Destination: {}".format(dest)
     print "Model template: {}".format(model_template)
@@ -24,14 +23,14 @@ def run_histoseg(exphome, source, dest, weights, model_template, mode, GPU_ID):
 
 
 def make_data_inference(filename, writeto, create, tilesize, writesize, overlap = 0, remove_first = False):
-    print "Running data creation for inference:"
+    print "\nRunning data creation for inference:"
     print "File: {}".format(filename)
     print "Destination: {}".format(writeto)
     return data.make_inference(filename, writeto, create, tilesize, writesize, overlap, remove_first)
 
  
 def assemble_tiles(result_root, source_dirs, writesize, overlap, overlay):
-    print "Assembling tiles:"
+    print "\nAssembling tiles:"
     print "Saving result to : {}".format(result_root)
     data.assemble(result_root, source_dirs, writesize, overlap, overlay)
 
@@ -48,9 +47,44 @@ def get_downsample_overlap(tilesize, writesize, overlap):
     return int(overlap / factor)
 
 
-def parse_options(args):
-    pass
+def parse_options(**kwargs):
+    print "Parsing arguments: "
 
+    defaults = {"filename": None,
+                "writeto": None,
+                "sub_dirs": ['tiles', 'result'],
+                "tilesize": 512,
+                "writesize": 256,
+                "overlap": 32,
+                "remove_first": False,
+                "weights": None,
+                "model_template": None, 
+                "caffe_mode": 0,
+                "GPU_ID": 0,
+                "overlay": True}
+    #passed_in = {}
+    for arg in kwargs:
+        print "{} : {}".format(arg, kwargs[arg])
+        #passed_in[arg] = kwargs[arg]
+
+    # Check what is defined, and assign defaults:
+    for d in defaults:
+        if d in kwargs:
+            pass
+        else:
+            print "Using default value for {}".format(d)
+            kwargs[d] = defaults[d]
+
+    print "\nFinal arg set:"
+    for arg in kwargs:
+        print "{} : {}".format(arg, kwargs[arg])
+    
+    # Everything's set; paths aren't allowed to be None:
+    if None in kwargs.itervalues():
+        raise Exception("All the paths must be set")
+    
+
+    return kwargs 
 
 def run_inference(**kwargs):
     args = parse_options(**kwargs)
@@ -84,6 +118,8 @@ def run_inference(**kwargs):
             args['writesize'], 
             downsample_overlap, 
             args['overlay'] )
+
+    cleanup(created)
 
 
 
