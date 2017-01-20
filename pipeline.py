@@ -47,6 +47,7 @@ def get_downsample_overlap(tilesize, writesize, overlap):
     
     return int(overlap / factor)
 
+
 def parse_options(args):
     pass
 
