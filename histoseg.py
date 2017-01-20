@@ -11,7 +11,8 @@ import cv2
 import inspect
 import numpy as np
 
-CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+#CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+CAFFE_ROOT = '/Users/nathaning/caffe-segnet-cudnn5'
 sys.path.insert(0, CAFFE_ROOT+"/python") 
 import caffe
 
@@ -25,11 +26,13 @@ def PrintFrame():
     thisline = info.lineno
     return '{} in {} (@ line {})'.format(thisfile, thisfun, thisline)
 
-def init_net(model, weights, mode):
+def init_net(model, weights, mode, GPU_ID):
     if mode == 0:
         caffe.set_mode_gpu()
+        caffe.set_device(GPU_ID)
     else:
         caffe.set_mode_cpu()
+
 
     net = caffe.Net(model, weights, caffe.TEST)
 
@@ -169,7 +172,7 @@ def get_output(d, net, colors):
     return x
 
 # Default to CPU
-def process(exphome, source, dest, model_template, weights, mode = 1):
+def process(exphome, source, dest, model_template, weights, mode = 1, GPU_ID = 0):
     
     # Force dest to be a list
     if isinstance(dest, basestring):
@@ -178,7 +181,7 @@ def process(exphome, source, dest, model_template, weights, mode = 1):
     listfile = write_list_densedata(source, exphome)
     model = substitute_img_list(model_template, exphome, listfile)
    
-    net = init_net(model, weights, mode)
+    net = init_net(model, weights, mode, GPU_ID)
 
     imgs = list_imgs(pth = source)
 

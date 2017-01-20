@@ -7,9 +7,10 @@ import os
 import data
 import histoseg
 import shutil
+import argparse
 
 
-def run_histoseg(exphome, source, dest, weights, model_template, mode):
+def run_histoseg(exphome, source, dest, weights, model_template, mode, GPU_ID):
     ## Echo inputs
     print "Running histoseg.process: "
     print "Source: {}".format(source)
@@ -17,8 +18,9 @@ def run_histoseg(exphome, source, dest, weights, model_template, mode):
     print "Model template: {}".format(model_template)
     print "Weights: {}".format(weights)
     print "Mode: {}".format(mode)
+    print "Running on GPU: {}".format(GPU_ID)
    
-    histoseg.process(exphome, source, dest, model_template, weights, mode)
+    histoseg.process(exphome, source, dest, model_template, weights, mode, GPU_ID)
 
 
 def make_data_inference(filename, writeto, create, tilesize, writesize, overlap = 0, remove_first = False):
@@ -30,7 +32,7 @@ def make_data_inference(filename, writeto, create, tilesize, writesize, overlap 
  
 def assemble_tiles(result_root, source_dirs, writesize, overlap, overlay):
     print "Assembling tiles:"
-
+    print "Saving result to : {}".format(result_root)
     data.assemble(result_root, source_dirs, writesize, overlap, overlay)
 
 def cleanup(dirs):
@@ -41,21 +43,59 @@ def cleanup(dirs):
 
 def get_downsample_overlap(tilesize, writesize, overlap):
     ts = tilesize + 2*overlap
-    factor = tilesize / float(writesize)
+    factor = ts / float(writesize)
     
     return int(overlap / factor)
 
+def parse_options(args):
+    pass
+
+
+def run_inference(**kwargs):
+    args = parse_options(**kwargs)
+
+    tiledir, exproot, created = make_data_inference(
+            args['filename'],
+            args['writeto'],
+            args['sub_dirs'],
+            args['tilesize'],
+            args['writesize'],
+            args['overlap'],
+            args['remove_first'])
+
+    run_histoseg( 
+            exproot, 
+            tiledir,
+            created,
+            args['weights'],
+            args['model_template'],
+            args['caffe_mode'],
+            args['GPU_ID'])
+
+    downsample_overlap = get_downsample_overlap(
+            args['tilesize'],
+            args['writesize'],
+            args['overlap'])
+
+    assemble_tiles( 
+            exproot,
+            created,
+            args['writesize'], 
+            downsample_overlap, 
+            args['overlay'] )
+
+
 
 if __name__ == "__main__":
-    filename = "/home/nathan/data/local_ccrcc/08_40X.svs"
-    writeto = "/home/nathan/histo-seg/ccrcc"
-    tilesize = 256
+    filename = "/Users/nathaning/Dropbox/SVS/PCA/MaZ-001-a.svs"
+    writeto = "/Users/nathaning/histo-seg/pca"
+    tilesize = 512
     writesize = 256 # this remains the dim expected by the network
-    overlap = tilesize/8
+    overlap = 64
     remove_first = True
 
-    weights = "/home/nathan/semantic-ccrcc/models/ec2/normalized_ccrcc_dec17_iter_26000.caffemodel"
-    model_template = "/home/nathan/histo-seg/code/segnet_basic_inference.prototxt"
+    weights = "/Users/nathaning/Dropbox/projects/semantic_pca/weights/pca_segnet_dec7_norm_65000.caffemodel"
+    model_template = "/Users/nathaning/histo-seg/code/segnet_basic_inference.prototxt"
     mode = 0 # 0 - GPU, 1 - CPU
     overlay = 1
     GPU_ID = 0
@@ -68,14 +108,15 @@ if __name__ == "__main__":
 
     print ""
     print "Experiment root: {}".format(exproot) 
-    print "Tiles: {}".format(tiledir)
-    print "Outputs: {}".format(created_dirs)
+    print ""
+    #print "Tiles: {}".format(tiledir)
+    #print "Outputs: {}".format(created_dirs)
     
     #exproot = '/home/nathan/histo-seg/pca/MaZ-001'
     #tiledir = '/home/nathan/histo-seg/pca/MaZ-001/tiles'
     #created_dirs = ['/home/nathan/histo-seg/pca/MaZ-001/result',
     #                '/home/nathan/histo-seg/pca/MaZ-001/prob']
-    run_histoseg( exproot, tiledir, created_dirs, weights, model_template, mode )
+    run_histoseg( exproot, tiledir, created_dirs, weights, model_template, mode, GPU_ID)
   
     # For overlapping: translate the overlap to the writesize:
     # Pixels extra that are encoded into each tile
@@ -84,6 +125,4 @@ if __name__ == "__main__":
     assemble_tiles( exproot, created_dirs, writesize, ds_overlap, overlay )
 
     # Clean extra space from the project. 
-    cleanup(created_dirs)
-
-
+    #cleanup(created_dirs)

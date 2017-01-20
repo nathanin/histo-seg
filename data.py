@@ -204,22 +204,39 @@ def find_bcg(wsi):
 def make_training():
     pass # make_data.py
 
+# TODO fix this logic. It's not good. write out the cases !!!!! omg stop being lazy,.
 def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
     tail = os.path.basename(filename)
     slide_name, ex = os.path.splitext(tail)
     exp_home = os.path.join(writeto, slide_name)
+    use_existing = True
+    fresh_dir = False
 
+    created_dirs = [os.path.join(exp_home, d) for d in sub_dirs]
+
+    # Take care of root first:
     if remove and os.path.exists(exp_home):
         shutil.rmtree(exp_home)
         os.makedirs(exp_home)
+        use_existing = False
+        fresh_dir = True
 
-    created_dirs = [os.path.join(exp_home, d) for d in sub_dirs]
-    if not os.path.exists(created_dirs[0]):
-        _ = [os.makedirs(d) for d in created_dirs]
+    if not os.path.exists(exp_home):
+        os.makedirs(exp_home)
+        fresh_dir = True
+        use_existing = False
 
-
-    return exp_home, created_dirs
-
+    if fresh_dir:
+        _ = [os.mkdir(d) for d in created_dirs]
+    else:
+        # Clear the ones that aren't tile:
+        for d in created_dirs[1:]:
+            if os.path.exists(d):
+                print "Removing {}".format(d)
+                shutil.rmtree(d)
+            os.mkdir(d)
+    
+    return exp_home, created_dirs, use_existing
 
 # New: adding overlap option
 '''
@@ -230,8 +247,20 @@ Method for overlapping:
 '''
 def make_inference(filename, writeto, create, tilesize = 512, writesize = 256, overlap = 0, remove_first = False):
     
-    exp_home, created_dirs = create_dirs_inference(filename, writeto, sub_dirs = create, remove = remove_first) 
+    exp_home, created_dirs, use_existing = create_dirs_inference(filename, writeto, sub_dirs = create, remove = remove_first) 
+   
     tiledir = created_dirs[0]
+
+    if use_existing:
+        # TODO add in here more feedback for this tree of action.
+        # TODO add here checks to see if the written tiles match the requested tiles.
+
+        print "Using existing tiles located {}".format(tiledir)
+        for d in created_dirs[1:]:
+            print "Created: {}".format(d)
+
+        return tiledir, exp_home, created_dirs[1:]
+
     for d in created_dirs:
         print "Created: {}".format(d)
 
@@ -382,7 +411,6 @@ def downsize_keep_ratio(img, target_w = 1024, interp = cv2.INTER_NEAREST):
 def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w = 10000):
     x,y,w,h = region
    
-    print ""
     print PrintFrame(),
     print " x: {} y: {} w: {} h: {}".format(x,y,w,h)
     print "Placing {} tiles".format(place_size)
@@ -436,15 +464,17 @@ def assemble(exp_home, sources, writesize, overlap, overlay):
         # TODO this loop still sucks
         #print PrintFrame(),"Processing region {}".format(index)
         for src in sources:
-            reg_name = '{:03d}_{}.jpg'.format(index, src) 
-            source_dir = os.path.join(exp_home, src)
+            src_base = os.path.basename(src) 
+            reg_name = '{:03d}_{}.jpg'.format(index, src_base) 
             
             #print "Pulling images from {}".format(source_dir)
             #print "Overlaying onto {}".format(overlay_dir)
-
-            img = build_region(reg, m, source_dir, writesize, overlap, overlay_dir) 
+            print ""
+            print "Region source dir {}".format(src)
+            img = build_region(reg, m, src, writesize, overlap, overlay_dir) 
             
             reg_name = os.path.join(exp_home, reg_name)
+            print "Saving region to {}".format(reg_name)
             cv2.imwrite( reg_name, img )
 
 
