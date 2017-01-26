@@ -24,6 +24,9 @@ import shutil
 import inspect
 import glob
 
+'''
+```````````````` DEBUGGING FUNCTOIN ``````````````````
+'''
 def PrintFrame():
     callerframerecord = inspect.stack()[1] #0 represents this line
     frame = callerframerecord[0]
@@ -180,31 +183,153 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
 
             tilemap = update_map(tilemap, x, y, index)
             written += 1
-
-    # Forego printing functions; TODO add logging
-
     return tilemap
+
+
+'''
+`````````````````````````````````` FOR CREATING A DATASET FROM PAIRED FEATURE/ANNOTATIONS
+
+                                                                                
+'''
+
 
 def flip(t):
     pass # make_data.py
 
-def rotate(t):
-    pass # make_data.py
 
-def coloration(t):
-    pass # make_data.py
+def rotate(img, rotation_matrix):
+    img = cv2.warpAffine(src = img, M = rotation_matrix, dsize= (img.shape[0:2]))
 
-def writeList(t):
-    pass # make_data.py
+    return img
 
-def multiply_data(targets):
-    pass # make_data.py
+
+def data_rotate(t, iters, ext = 'jpg', writesize = 256):
+    center = (writesize/2, writesize/2)
+    rotation_matrix = cv2.getRotationMatrix2D(center=center, angle = 90, scale = 1.0)
+    
+    img_list = glob.glob(os.path.join(t, '*.'+ext))
+    for name in img_list:
+        img = cv2.imread(name)
+        for k in range(iters):
+            name = name.replace('.'+ext, 'r.'+ext)
+            #print name
+            img = rotate(img, rotation_matrix)
+            cv2.imwrite(filename = name, img = img)
+            
+    print 'Done rotating images in {}'.format(t)
+    
+def coloration(img, l_mean, l_std):
+    target = np.array([[l_mean, l_std], [169.3, 9.01], [105.97, 6.67] ])
+
+    return cnorm.normalize(img, target)
+
+def data_coloration(t, mode, ext):
+    # TODO replace with random  numbers generated from uniform distrib. 
+    l_mean_range = (144.048, 130.22)
+    l_std_range = (40.23, 35.00)
+
+    img_list = glob.glob(os.path.join(t, '*.'+ext))
+    for name in img_list:
+        img = cv2.imread(name)
+        for LMN, LSTD in zip(l_mean_range, l_std_range):
+            name = name.replace('.'+ext, 'c.'+ext)
+            # print name
+            if mode == 'feat':
+                #target = np.array([ [LMN, LSTD], [169.3, 9.01], [105.97, 6.67] ])
+                img = coloration(img, LMN, LSTD)
+                cv2.imwrite(filename = name, img = img)
+            elif mode == 'anno':
+                # Annotation images do not get color modified; write out as-is with new name
+                cv2.imwrite(filename = name, img = img)
+    
+    print 'Done color augmenting images in {}'.format(t)
+                
+
+
+def writeList(src, anno):
+    '''
+    Take in a src dir, annotations dir, and a root folder.
+    With digits this is unnecessary. 
+    '''
+    #listfile = os.path.join(t, 'list.txt')
+    #with open(listfile, 'r') as f:
+    pass
+
+def split_img(t, ext, writesize = 256,tiles = 4):
+    # Split into `tiles` number of sub-regions
+    # It help if tiles is a square number.
+    # Pull one image, get the dimensions:
+    img_list = glob.glob(os.path.join(t, '*.'+ext))
+    example = cv2.imread(img_list[0])
+    h,w = example.shape[0:2]
+    # TODO make this general, ffs!!!
+    # added + 1 to make odd-numbered cuts
+    # i.e it will have a true center. 
+    grid = np.array([[0, 0, (w/2)+1, (h/2)+1],
+                    [0, h/2, (w/2)+1, h],
+                    [w/2, 0, w, (h/2)+1],
+                    [w/2, h/2, w, h]])
+
+    # remove the original image
+    # name-out: tile1 --> tile1s, tile1ss, tile1sss, tile1ssss
+    for name in img_list:
+        img = cv2.imread(name)
+        os.remove(name)
+        for i in range(tiles):
+            r = grid[i, :]
+            name = name.replace('.'+ext, 's.'+ext)
+            #print "extracting {}".format(r)
+            subimg = img[r[0]:r[2], r[1]:r[3], :]
+            #print "subimg {} sized {}".format(i, subimg.shape) 
+            subimg = cv2.resize(subimg, dsize = (writesize, writesize))
+
+            cv2.imwrite(filename = name, img = subimg)
+
+    print 'Done partitioning images in {}'.format(t)                    
+             
+
+
+
+
+def multiply_data(src, anno):
+    '''
+    Define a set of transformations, to be applied sequentially, to images.
+    For each image, track it's annotation image and copy the relevant transformations.
+
+    This should work for any sort fo experiment where 
+    - annotation images are contained in one dir
+    - similary named source images are contained in their own dir
+    - we want them to be multiplied
+
+    The goal is to not write a brand new script every time.
+    '''
+    print "\nAffirm that \n{} \nand \n{} \nare not originals.".format(src, anno) 
+    choice = input("I have made copies. (1/no) ")
+
+    if choice == 1:
+        print "Continuing"
+
+    else:
+        print "non-1 response. exiting TODO: Make this nicer"
+        return 0
+    # That was important because the following functions write out to the original dirs.
+    # I.E. they change the contents.. which is usually a no no. but this time is how it goes.
+    
+    # Do identical operations on src and anno
+    split_img(src, ext = 'jpg'); split_img(anno, ext = 'png');
+    data_rotate(src, 3, ext = 'jpg'); data_rotate(anno, 3, ext = 'png');
+    data_coloration(src, 'feat', 'jpg'); data_coloration(anno, 'anno', 'png');
+
+
 
 def find_bcg(wsi):
     pass # make_data.py
 
-def make_training():
-    pass # make_data.py
+
+def make_training_seg():
+    # actually it makes more sense to have this per-project since the requirements will be dramatically different each time.
+    pass
+
 
 # TODO fix this logic. It's not good. write out the cases !!!!! omg stop being lazy,.
 def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
