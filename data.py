@@ -288,7 +288,40 @@ def split_img(t, ext, writesize = 256,tiles = 4):
     print 'Done partitioning images in {}'.format(t)                    
              
 
+def partition_train_val(src, dst, trainpct = 0.85, valpct = 0.15):
+    '''
+    Training and validation partition
+    Take care of a lot of preprocessing here
 
+    1. Randomly partition data into training and validation according to the fractions
+    2. Make new directories underneath 'dst'
+
+    Assume src contains one dir for each class.
+    Make sure the classes are evenly represented : 
+    ---------------------------------------------
+    '''
+    pass
+
+
+
+def multiply_one_folder(src):
+    '''
+    I think this is a good idea. 1-26-17
+    '''
+
+    print "\nAffirm that \n {} is not the original dir.".format(src)
+    choice = input("I have made copies (1) or not (anything else) \t");
+    if choice == 1:
+        print "Continuing"
+    else:
+        print "Make a copy of the data first. TODO make this less dumb."
+        return 0 # break
+
+
+    print "Rotating images in {}".format(src);
+    data_rotate(src, 3, ext = 'jpg');
+    print "Modulating color for data in {}.".format(src);
+    data_coloration(src, 'feat', 'jpg');
 
 
 def multiply_data(src, anno):
