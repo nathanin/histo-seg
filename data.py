@@ -66,10 +66,11 @@ def write_tile(tile, filename, writesize, normalize):
     tile = cv2.cvtColor(tile, cv2.COLOR_RGBA2RGB) # ???
     tile = tile[:,:,(2,1,0)] # ???
 
-    tile = cv2.resize(tile, dsize = (writesize, writesize), interpolation = cv2.INTER_LINEAR) # Before norm; for speed??
+    tile = cv2.resize(tile, dsize = (writesize, writesize), 
+                      interpolation = cv2.INTER_LINEAR) # Before norm; for speed??
     if normalize:
-        tile = cnorm.normalize(image = tile, target = None, verbose = False)
-    #tile = cv2.resize(tile, dsize = (writesize, writesize), interpolation = cv2.INTER_LINEAR) # Before norm; for speed??
+        tile = cnorm.normalize(image = tile, target = None, 
+                               verbose = False)
    
     cv2.imwrite(filename = filename, img = tile)
 
@@ -186,11 +187,13 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     return tilemap
 
 
-'''
-`````````````````````````````````` FOR CREATING A DATASET FROM PAIRED FEATURE/ANNOTATIONS
-
-                                                                                
-'''
+##################################################################
+##################################################################
+###
+###   ----  CREATING DATASETS FROM IMAGES IN A FOLDER ---- 
+###
+##################################################################
+##################################################################
 
 
 def flip(t):
@@ -199,17 +202,22 @@ def flip(t):
 
 def rotate(img, rotation_matrix):
     img = cv2.warpAffine(src = img, M = rotation_matrix, dsize= (img.shape[0:2]))
-
     return img
 
 
-def data_rotate(t, iters, ext = 'jpg', writesize = 256):
-    center = (writesize/2, writesize/2)
+def data_rotate(t, iters, ext = 'jpg', mode = '3ch', writesize = 256):
+    center = (writesize/2 - 1, writesize/2 - 1)
     rotation_matrix = cv2.getRotationMatrix2D(center=center, angle = 90, scale = 1.0)
     
     img_list = glob.glob(os.path.join(t, '*.'+ext))
     for name in img_list:
-        img = cv2.imread(name)
+        if mode == '3ch':
+            img = cv2.imread(name)
+        elif mode == '1ch':
+            #img = cv2.imread(name, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+            img = cv2.imread(name)
+            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
+
         for k in range(iters):
             name = name.replace('.'+ext, 'r.'+ext)
             #print name
@@ -217,30 +225,37 @@ def data_rotate(t, iters, ext = 'jpg', writesize = 256):
             cv2.imwrite(filename = name, img = img)
             
     print 'Done rotating images in {}'.format(t)
-    
+   
+
 def coloration(img, l_mean, l_std):
     target = np.array([[l_mean, l_std], [169.3, 9.01], [105.97, 6.67] ])
-
     return cnorm.normalize(img, target)
+
 
 def data_coloration(t, mode, ext):
     # TODO replace with random  numbers generated from uniform distrib. 
-    l_mean_range = (144.048, 130.22)
-    l_std_range = (40.23, 35.00)
+    l_mean_range = (144.048, 130.22, 145.0, 135.5)
+    l_std_range = (40.23, 35.00, 35.00, 37.5)
 
     img_list = glob.glob(os.path.join(t, '*.'+ext))
-    for name in img_list:
-        img = cv2.imread(name)
+    for idx, name in enumerate(img_list):
+        if idx % 500 == 0:
+            print "\tcolorizing {} of {}".format(idx, len(img_list))
+        #img = cv2.imread(name)
         for LMN, LSTD in zip(l_mean_range, l_std_range):
-            name = name.replace('.'+ext, 'c.'+ext)
+            name_out = name.replace('.'+ext, 'c.'+ext)
             # print name
             if mode == 'feat':
+                img = cv2.imread(name)
                 #target = np.array([ [LMN, LSTD], [169.3, 9.01], [105.97, 6.67] ])
                 img = coloration(img, LMN, LSTD)
-                cv2.imwrite(filename = name, img = img)
+                cv2.imwrite(filename = name_out, img = img)
             elif mode == 'anno':
+                #img = cv2.imread(name, 0)
+                img = cv2.imread(name)
+                #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
                 # Annotation images do not get color modified; write out as-is with new name
-                cv2.imwrite(filename = name, img = img)
+                cv2.imwrite(filename = name_out, img = img)
     
     print 'Done color augmenting images in {}'.format(t)
                 
@@ -255,14 +270,18 @@ def writeList(src, anno):
     #with open(listfile, 'r') as f:
     pass
 
-def split_img(t, ext, writesize = 256,tiles = 4):
+
+
+def split_img(t, ext, mode = "3ch", writesize = 256,tiles = 4):
     # Split into `tiles` number of sub-regions
     # It help if tiles is a square number.
     # Pull one image, get the dimensions:
+    
     img_list = glob.glob(os.path.join(t, '*.'+ext))
     example = cv2.imread(img_list[0])
     h,w = example.shape[0:2]
-    # TODO make this general, ffs!!!
+   
+    # TODO make this general, FFS!!!
     # added + 1 to make odd-numbered cuts
     # i.e it will have a true center. 
     grid = np.array([[0, 0, (w/2)+1, (h/2)+1],
@@ -273,20 +292,77 @@ def split_img(t, ext, writesize = 256,tiles = 4):
     # remove the original image
     # name-out: tile1 --> tile1s, tile1ss, tile1sss, tile1ssss
     for name in img_list:
-        img = cv2.imread(name)
+        if mode == "3ch":
+            img = cv2.imread(name)
+        elif mode == "1ch":
+            #img = cv2.imread(name, 0)
+            img = cv2.imread(name)
+            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
+
         os.remove(name)
         for i in range(tiles):
             r = grid[i, :]
             name = name.replace('.'+ext, 's.'+ext)
-            #print "extracting {}".format(r)
-            subimg = img[r[0]:r[2], r[1]:r[3], :]
-            #print "subimg {} sized {}".format(i, subimg.shape) 
-            subimg = cv2.resize(subimg, dsize = (writesize, writesize))
 
+            if mode == "3ch":
+                subimg = img[r[0]:r[2], r[1]:r[3], :]
+                subimg = cv2.resize(subimg, dsize = (writesize, writesize),
+                                    interpolation = cv2.INTER_NEAREST)
+            elif mode == "1ch":
+                subimg = img[r[0]:r[2], r[1]:r[3]]
+                subimg = cv2.resize(subimg, dsize = (writesize, writesize), 
+                                    interpolation = cv2.INTER_NEAREST)
+
+            #subimg = cv2.resize(subimg, dsize = (writesize, writesize))
             cv2.imwrite(filename = name, img = subimg)
 
     print 'Done partitioning images in {}'.format(t)                    
              
+def random_crop(h,w,edge):
+    minx = 0
+    miny = 0
+
+    maxx = w-edge
+    maxy = h-edge
+
+    x = np.random.randint(minx, maxx)
+    y = np.random.randint(miny, maxy)
+
+    return x, x+writesize, y, y+writesize
+
+def sub_img(t, ext, mode = "3ch", edge = 256, writesize = 256, n = 4):
+    # In contrast to split, do a random crop n times
+
+    img_list = glob.glob(os.path.join(t, '*.'+ext))
+    example = cv2.imread(img_list[0])
+    h,w = example.shape[0:2]
+
+    for name in img_list:
+        if mode == "3ch":
+            img = cv2.imread(name)
+        elif mode == "1ch":
+            img = cv2.imread(name)
+            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
+
+        os.remove(name) # SUPER SKETCHYYYYY 
+        for i in range(n):
+            x,x2,y,y2 = random_crop(h,w, edge = edge)
+            name = name.replace('.'+ext, 's.'+ext)
+
+            if mode == "3ch":
+                subimg = img[x:x2, y:y2, :]
+                subimg = cv2.resize(subimg, dsize = (writesize, writesize),
+                                    interpolation = cv2.INTER_NEAREST)
+            elif mode == "1ch":
+                subimg = img[x:x2, y:y2, :]
+                subimg = cv2.resize(subimg, dsize = (writesize, writesize), 
+                                    interpolation = cv2.INTER_NEAREST)
+
+            #subimg = cv2.resize(subimg, dsize = (writesize, writesize))
+            cv2.imwrite(filename = name, img = subimg)
+
+    print 'Done partitioning images in {}'.format(t)
+
 
 def partition_train_val(src, dst, trainpct = 0.85, valpct = 0.15):
     '''
@@ -308,7 +384,6 @@ def multiply_one_folder(src):
     '''
     I think this is a good idea. 1-26-17
     '''
-
     print "\nAffirm that \n {} is not the original dir.".format(src)
     choice = input("I have made copies (1) or not (anything else) \t");
     if choice == 1:
@@ -336,12 +411,11 @@ def multiply_data(src, anno):
 
     The goal is to not write a brand new script every time.
     '''
-    print "\nAffirm that \n{} \nand \n{} \nare not originals.".format(src, anno) 
+    print "\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n".format(src, anno) 
     choice = input("I have made copies. (1/no) ")
 
     if choice == 1:
         print "Continuing"
-
     else:
         print "non-1 response. exiting TODO: Make this nicer"
         return 0
@@ -349,19 +423,23 @@ def multiply_data(src, anno):
     # I.E. they change the contents.. which is usually a no no. but this time is how it goes.
     
     # Do identical operations on src and anno
-    split_img(src, ext = 'jpg'); split_img(anno, ext = 'png');
-    data_rotate(src, 3, ext = 'jpg'); data_rotate(anno, 3, ext = 'png');
-    data_coloration(src, 'feat', 'jpg'); data_coloration(anno, 'anno', 'png');
+    # /not good but works.
+    # split_img(src, ext = 'jpg', mode = "3ch"); 
+    # split_img(anno, ext = 'png', mode = "1ch");
 
+    sub_img(src, ext = 'jpg', mode = "3ch"); 
+    sub_img(anno, ext = 'png', mode = "1ch");
+
+    data_rotate(src, 3, ext = 'jpg', mode = "3ch"); 
+    data_rotate(anno, 3, ext = 'png', mode = "1ch");
+    
+    data_coloration(src, 'feat', 'jpg'); 
+    data_coloration(anno, 'anno', 'png');
 
 
 def find_bcg(wsi):
     pass # make_data.py
 
-
-def make_training_seg():
-    # actually it makes more sense to have this per-project since the requirements will be dramatically different each time.
-    pass
 
 
 # TODO fix this logic. It's not good. write out the cases !!!!! omg stop being lazy,.
@@ -395,20 +473,22 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
                 print "Removing {}".format(d)
                 shutil.rmtree(d)
             os.mkdir(d)
-    
     return exp_home, created_dirs, use_existing
+
 
 # New: adding overlap option
 '''
-Method for overlapping:
-    - Create lattice without considering overlap
-    - Add overlap to tilesize in both dims
-    - Writesize remains 256; that's what the network wants. (change this by not being dum)
+    Method for overlapping:
+        - Create lattice without considering overlap
+        - Add overlap to tilesize in both dims
+        - Writesize remains 256; that's what the network wants. 
+        (change this by not being dum)
 '''
-def make_inference(filename, writeto, create, tilesize = 512, writesize = 256, overlap = 0, remove_first = False):
+def make_inference(filename, writeto, create, tilesize = 512, 
+                   writesize = 256, overlap = 0, remove_first = False):
     
-    exp_home, created_dirs, use_existing = create_dirs_inference(filename, writeto, sub_dirs = create, remove = remove_first) 
-   
+    exp_home, created_dirs, use_existing = create_dirs_inference(filename, 
+                                           writeto, sub_dirs = create, remove = remove_first) 
     tiledir = created_dirs[0]
 
     if use_existing:
@@ -441,15 +521,16 @@ def make_inference(filename, writeto, create, tilesize = 512, writesize = 256, o
 
     wsi.close()
 
-    #listfile = write_list_densedata(tiledir, exp_home)
-
     return tiledir, exp_home, created_dirs[1:]
 
 
-
-'''
-~~~~~~~~~~~~~~~~~~~~~~~~ ASSEMBLE TILES ~~~~~~~~~~~~~~~~~~~~~~~~
-'''
+##################################################################
+##################################################################
+###
+###       ~~~~~~~~~~~~~~~ ASSEMBLE TILES ~~~~~~~~~~~~~~~~~
+###
+##################################################################
+##################################################################
 
 def label_regions(m):
     h,w = m.shape

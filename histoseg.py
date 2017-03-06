@@ -26,6 +26,7 @@ def PrintFrame():
     thisline = info.lineno
     return '{} in {} (@ line {})'.format(thisfile, thisfun, thisline)
 
+
 def init_net(model, weights, mode, GPU_ID):
     if mode == 0:
         caffe.set_mode_gpu()

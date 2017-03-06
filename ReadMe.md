@@ -11,4 +11,9 @@ Examples:
 
 * Use-case 3: lung adenocarcinoma growth patterns, with converted Full-Connected deconvolution layers; trained on whole tile examples.
 
+### Preparing data
+Data is presumed to exist grouped by eventual class, for classificaiton, or in feature-annotation pair folders for segmentation. 
+
+
+
 Direct questions & comments to ing[dot]nathany[at]gmail[dot]com
