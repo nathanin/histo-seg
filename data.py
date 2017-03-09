@@ -209,7 +209,7 @@ def data_rotate(t, iters, ext = 'jpg', mode = '3ch', writesize = 256):
     center = (writesize/2 - 1, writesize/2 - 1)
     rotation_matrix = cv2.getRotationMatrix2D(center=center, angle = 90, scale = 1.0)
     
-    img_list = glob.glob(os.path.join(t, '*.'+ext))
+    img_list = sorted(glob.glob(os.path.join(t, '*.'+ext)))
     for name in img_list:
         if mode == '3ch':
             img = cv2.imread(name)
@@ -237,24 +237,18 @@ def data_coloration(t, mode, ext):
     l_mean_range = (144.048, 130.22, 145.0, 135.5)
     l_std_range = (40.23, 35.00, 35.00, 37.5)
 
-    img_list = glob.glob(os.path.join(t, '*.'+ext))
+    img_list = sorted(glob.glob(os.path.join(t, '*.'+ext)))
     for idx, name in enumerate(img_list):
         if idx % 500 == 0:
             print "\tcolorizing {} of {}".format(idx, len(img_list))
-        #img = cv2.imread(name)
         for LMN, LSTD in zip(l_mean_range, l_std_range):
             name_out = name.replace('.'+ext, 'c.'+ext)
-            # print name
             if mode == 'feat':
                 img = cv2.imread(name)
-                #target = np.array([ [LMN, LSTD], [169.3, 9.01], [105.97, 6.67] ])
                 img = coloration(img, LMN, LSTD)
                 cv2.imwrite(filename = name_out, img = img)
             elif mode == 'anno':
-                #img = cv2.imread(name, 0)
                 img = cv2.imread(name)
-                #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
-                # Annotation images do not get color modified; write out as-is with new name
                 cv2.imwrite(filename = name_out, img = img)
     
     print 'Done color augmenting images in {}'.format(t)
@@ -318,7 +312,8 @@ def split_img(t, ext, mode = "3ch", writesize = 256,tiles = 4):
 
     print 'Done partitioning images in {}'.format(t)                    
              
-def random_crop(h,w,edge):
+
+def random_crop(h, w, edge):
     minx = 0
     miny = 0
 
@@ -328,40 +323,68 @@ def random_crop(h,w,edge):
     x = np.random.randint(minx, maxx)
     y = np.random.randint(miny, maxy)
 
-    return x, x+writesize, y, y+writesize
+    x2 = x+edge
+    y2 = y+edge
 
-def sub_img(t, ext, mode = "3ch", edge = 256, writesize = 256, n = 4):
+    return [x, x2, y, y2]
+
+
+def sub_img(img_list, ext, mode = "3ch", edge = 512, writesize = 256, n = 6, coords = 0):
     # In contrast to split, do a random crop n times
 
-    img_list = glob.glob(os.path.join(t, '*.'+ext))
+    # img_list = sorted(glob.glob(os.path.join(path, '*.'+ext)))
     example = cv2.imread(img_list[0])
     h,w = example.shape[0:2]
 
-    for name in img_list:
-        if mode == "3ch":
-            img = cv2.imread(name)
-        elif mode == "1ch":
-            img = cv2.imread(name)
-            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
+    # Keep track of the randomly generated coordinates
+    if coords == 0:
+        # print 'Generating random coordinates'
+        gencoord = True
+        coords = [0]*len(img_list)
+    else:
+        # print 'Using imported coordinates'
+        gencoord = False
+    # print len(coords)
 
-        os.remove(name) # SUPER SKETCHYYYYY 
+    for index, (name, c) in enumerate(zip(img_list, coords)):
+        img = cv2.imread(name)
+        # os.remove(name) # SUPER SKETCHYYYYY
+        name = name.replace('.'+ext, '_{}.{}'.format(edge,ext))
+
+        # print coord
+        if gencoord:
+            # Has to hold values up to max(h,w)
+            coordsout = np.zeros(shape = (n, 4), dtype = np.uint32)
+ 
         for i in range(n):
-            x,x2,y,y2 = random_crop(h,w, edge = edge)
+            if gencoord:
+                x, x2, y, y2 = random_crop(h,w, edge = edge)
+                coordsout[i,:] = [x, x2, y, y2]
+                # print 'Coordstout: ',coordsout[i,:], ' ', 
+            else:
+                x,x2,y,y2 = c[i,:]
+
+            # print '{} : {} \t {} : {}'.format(x,x2,y,y2)
             name = name.replace('.'+ext, 's.'+ext)
 
             if mode == "3ch":
                 subimg = img[x:x2, y:y2, :]
                 subimg = cv2.resize(subimg, dsize = (writesize, writesize),
-                                    interpolation = cv2.INTER_NEAREST)
+                                    interpolation = cv2.INTER_LINEAR)
             elif mode == "1ch":
                 subimg = img[x:x2, y:y2, :]
                 subimg = cv2.resize(subimg, dsize = (writesize, writesize), 
                                     interpolation = cv2.INTER_NEAREST)
 
-            #subimg = cv2.resize(subimg, dsize = (writesize, writesize))
             cv2.imwrite(filename = name, img = subimg)
 
-    print 'Done partitioning images in {}'.format(t)
+            if gencoord:
+                coords[index] = coordsout
+
+
+    # print 'Done partitioning images in {}'.format(path)
+
+    return coords
 
 
 def partition_train_val(src, dst, trainpct = 0.85, valpct = 0.15):
@@ -378,6 +401,10 @@ def partition_train_val(src, dst, trainpct = 0.85, valpct = 0.15):
     '''
     pass
 
+
+def delete_list(imglist):
+    for img in imglist:
+        os.remove(img)
 
 
 def multiply_one_folder(src):
@@ -422,19 +449,24 @@ def multiply_data(src, anno):
     # That was important because the following functions write out to the original dirs.
     # I.E. they change the contents.. which is usually a no no. but this time is how it goes.
     
-    # Do identical operations on src and anno
-    # /not good but works.
-    # split_img(src, ext = 'jpg', mode = "3ch"); 
-    # split_img(anno, ext = 'png', mode = "1ch");
+    srclist = sorted(glob.glob(os.path.join(src, '*.jpg')))
+    annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
 
-    sub_img(src, ext = 'jpg', mode = "3ch"); 
-    sub_img(anno, ext = 'png', mode = "1ch");
+    # Multi-scale
+    for scale in [756, 512, 256]:
+        coords = sub_img(srclist, ext = 'jpg', mode = "3ch", edge = scale); 
+        _ = sub_img(annolist, ext = 'png', mode = "1ch", edge = scale, coords = coords);
+
+    # Now it's oK to remove the originals
+    delete_list(srclist)
+    delete_list(annolist)
+
+    data_coloration(src, 'feat', 'jpg'); 
+    data_coloration(anno, 'anno', 'png');
 
     data_rotate(src, 3, ext = 'jpg', mode = "3ch"); 
     data_rotate(anno, 3, ext = 'png', mode = "1ch");
-    
-    data_coloration(src, 'feat', 'jpg'); 
-    data_coloration(anno, 'anno', 'png');
+   
 
 
 def find_bcg(wsi):
