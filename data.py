@@ -152,7 +152,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     ntiles = len(lst) # == nrow * ncol
 
 
-    # TODO: add chuck read's and low-res whitespace mapping
+    # TODO: add block read's and low-res whitespace mapping
     print ""
     print "Populating tilemap"
     print "Created a {} row by {} col lattice over the image".format(nrow, ncol)
@@ -171,16 +171,16 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
         tile = wsi.read_region(location = (x*tile_top - overlap_top, y*tile_top - overlap_top), 
                 level = 0, 
                 size =(tile_top + 2*overlap_top, tile_top + 2*overlap_top)) 
-        # size= () may be w.r.t. the level...
         
         # tile is a PIL.Image:
         tile = np.array(tile)
 
-
         # Decide if the tile is white: If OK, then write it
+        # TODO: add propagating option to do normalization on the whole thing. 
+        # Remove this option here and loop over tiles later - better. 
         if check_white(tile):
             filename = os.path.join(writeto, name)
-            write_tile(tile, filename, writesize, normalize = True)
+            write_tile(tile, filename, writesize, normalize = False)
 
             tilemap = update_map(tilemap, x, y, index)
             written += 1
@@ -474,7 +474,7 @@ def find_bcg(wsi):
 
 
 
-# TODO fix this logic. It's not good. write out the cases !!!!! omg stop being lazy,.
+# TODO fix this logic. It's not good. 
 def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
     tail = os.path.basename(filename)
     slide_name, ex = os.path.splitext(tail)
@@ -520,7 +520,9 @@ def make_inference(filename, writeto, create, tilesize = 512,
                    writesize = 256, overlap = 0, remove_first = False):
     
     exp_home, created_dirs, use_existing = create_dirs_inference(filename, 
-                                           writeto, sub_dirs = create, remove = remove_first) 
+                                                                 writeto, 
+                                                                 sub_dirs = create, 
+                                                                 remove = remove_first) 
     tiledir = created_dirs[0]
 
     if use_existing:

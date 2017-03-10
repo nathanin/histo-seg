@@ -19,14 +19,17 @@ def run_histoseg(exphome, source, dest, weights, model_template, mode, GPU_ID):
     print "Mode: {}".format(mode)
     print "Running on GPU: {}".format(GPU_ID)
    
-    histoseg.process(exphome, source, dest, model_template, weights, mode, GPU_ID)
+    histoseg.process(exphome, source, dest, model_template, 
+                     weights, mode, GPU_ID)
 
 
-def make_data_inference(filename, writeto, create, tilesize, writesize, overlap = 0, remove_first = False):
+def make_data_inference(filename, writeto, create, tilesize, 
+                        writesize, overlap = 0, remove_first = False):
     print "\nRunning data creation for inference:"
     print "File: {}".format(filename)
     print "Destination: {}".format(writeto)
-    return data.make_inference(filename, writeto, create, tilesize, writesize, overlap, remove_first)
+    return data.make_inference(filename, writeto, create, tilesize, 
+                               writesize, overlap, remove_first)
 
  
 def assemble_tiles(result_root, source_dirs, writesize, overlap, overlay):
@@ -61,8 +64,9 @@ def parse_options(**kwargs):
                 "model_template": None, 
                 "caffe_mode": 0,
                 "GPU_ID": 0,
-                "overlay": True}
-    #passed_in = {}
+                "overlay": True,
+                "tileonly": False}
+
     for arg in kwargs:
         print "{} : {}".format(arg, kwargs[arg])
         #passed_in[arg] = kwargs[arg]
@@ -87,35 +91,35 @@ def parse_options(**kwargs):
 def run_inference(**kwargs):
     args = parse_options(**kwargs)
 
-    tiledir, exproot, created = make_data_inference(
-            args['filename'],
-            args['writeto'],
-            args['sub_dirs'],
-            args['tilesize'],
-            args['writesize'],
-            args['overlap'],
-            args['remove_first'])
+    tiledir, exproot, created = make_data_inference(args['filename'],
+                                                    args['writeto'],
+                                                    args['sub_dirs'],
+                                                    args['tilesize'],
+                                                    args['writesize'],
+                                                    args['overlap'],
+                                                    args['remove_first'])
 
-    run_histoseg( 
-            exproot, 
-            tiledir,
-            created,
-            args['weights'],
-            args['model_template'],
-            args['caffe_mode'],
-            args['GPU_ID'])
+    if args['tileonly']:
+        print "Done processing {}; Returning".format(args['filename'])
+        return
 
-    downsample_overlap = get_downsample_overlap(
-            args['tilesize'],
-            args['writesize'],
-            args['overlap'])
+    run_histoseg(exproot, 
+                 tiledir,
+                 created,
+                 args['weights'],
+                 args['model_template'],
+                 args['caffe_mode'],
+                 args['GPU_ID'])
 
-    assemble_tiles( 
-            exproot,
-            created,
-            args['writesize'], 
-            downsample_overlap, 
-            args['overlay'] )
+    downsample_overlap = get_downsample_overlap(args['tilesize'],
+                                                args['writesize'],
+                                                args['overlap'])
+
+    assemble_tiles(exproot,
+                   created,
+                   args['writesize'], 
+                   downsample_overlap, 
+                   args['overlay'] )
 
     cleanup(created)
 
