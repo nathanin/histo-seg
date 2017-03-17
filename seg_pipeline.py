@@ -30,7 +30,7 @@ def make_data_inference(filename, writeto, create, tilesize,
     return data.make_inference(filename, writeto, create, tilesize, 
                                writesize, overlap, remove_first)
 
-def assemble_full_slide(scales= scales, **kwargs)
+def assemble_full_slide(scales= [756, 512, 256], **kwargs):
     # With N number of scales, average the probability images from each:
     # The catch:
     # We have to work on the whole slide at once, it's the only way to be
@@ -47,7 +47,7 @@ def assemble_tiles(result_root, expdirs, writesize, overlap, overlay,
     print "Saving result to : {}".format(result_root)
     area_cutoff = data.calc_tile_cutoff(filename, tilesize)
     data.assemble(result_root, expdirs, writesize, overlap, 
-                  overlay, area_cutoff)
+                  overlay, area_cutoff, tilesize)
 
 def cleanup(dirs):
     for d in dirs:

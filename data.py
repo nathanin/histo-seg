@@ -691,14 +691,14 @@ def calc_tile_cutoff(filename, tilesize):
 
 
 # TODO this function isn't very good. the place to generalize isn't really obvious to me. 
-def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff):
+def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff, tilesize):
     
     # Force sources to be a list:
     if isinstance(expdirs, basestring):
         expdirs = [expdirs]
 
     # Pull in the image map:
-    map_file = os.path.join(exp_home, 'data_tilemap.npy')
+    map_file = os.path.join(exp_home, 'data_tilemap_{}.npy'.format(tilesize))
     m = np.load(map_file)
     [N,M] = m.shape # Forego printing
 
