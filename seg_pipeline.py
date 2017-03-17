@@ -7,6 +7,10 @@ import os
 import data
 import histoseg # Mine
 import shutil
+import glob
+
+from openslide import OpenSlide
+import numpy as np
 
 
 def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID):
@@ -38,8 +42,33 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
     # reasonably sure to align all the scales
 
     # Still there will be a little bit of disconcordance. Just a bit.
+    exproot = kwargs['writeto']
+    expdirs = kwargs['sub_dirs']
 
-    pass
+    svsfile = OpenSlide(kwargs['filename'])
+    level_0_dims = svsfile.level_dimensions[2] # common target size; pretty small.
+
+    scaleimages = []
+    for k,s in enumerate(scales):
+        # Pull prob matching the scale
+        probdirs = ['{}_{}'.format(d, s) in expdirs if 'prob' in expdirs]
+
+        # Get the tilemap
+        tilemap = 'data_tilemap_{}.npy'.format(s)
+        m = np.load(tilemap)
+        w,h = m.shape
+
+        # Construct scaled images
+        scaleimages[k] = [data.build_region(region = [0,0,w,h], m = m, source_dir = pd,
+                                place_size = kwargs['writesize'], overlap = kwargs['overlap'],
+                                overlay_dir = '', max_w = level_0_dims[0]) for pd in probdirs]
+
+    # Got all the images like this:
+    # scaleimages = [[prob1_s1, prob2_s1,..], [prob1_s2, prob2_s2,..]]
+    for k,s in enumerate(scales):
+        scale_ = [si[k] for si in scaleimages]
+
+        # Combine them somehow
 
 
 def assemble_tiles(result_root, expdirs, writesize, overlap, overlay,
@@ -162,7 +191,7 @@ def run_multiscale(**kwargs):
         run_inference(do_clean = False, do_parsing = False, **args)
 
     # Now all the resolution's and outputs exist
-    #assemble_full_slide(scales= scales, **args)
+    #assemble_full_slide(scales= scales, **kwargs)
 
 
 if __name__ == "__main__":

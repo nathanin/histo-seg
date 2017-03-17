@@ -647,6 +647,7 @@ def downsize_keep_ratio(img, target_w = 1024, interp = cv2.INTER_NEAREST):
     img_new = cv2.resize(src = img, dsize = (target_w, target_h), interpolation = interp)
 
     return img_new
+    
 
 
 def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w = 10000):
