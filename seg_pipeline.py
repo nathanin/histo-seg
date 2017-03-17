@@ -30,8 +30,14 @@ def make_data_inference(filename, writeto, create, tilesize,
     return data.make_inference(filename, writeto, create, tilesize, 
                                writesize, overlap, remove_first)
 
-def assemble_full_slide(**kwargs):
+def assemble_full_slide(scales= scales, **kwargs)
     # With N number of scales, average the probability images from each:
+    # The catch:
+    # We have to work on the whole slide at once, it's the only way to be
+    # reasonably sure to align all the scales
+
+    # Still there will be a little bit of disconcordance. Just a bit.
+
     pass
 
 
@@ -157,7 +163,7 @@ def run_multiscale(**kwargs):
         run_inference(do_clean = False, do_parsing = False, **args)
 
     # Now all the resolution's and outputs exist
-    #assemble_full_slide(args)
+    #assemble_full_slide(scales= scales, **args)
 
 
 if __name__ == "__main__":

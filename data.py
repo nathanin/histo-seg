@@ -524,7 +524,7 @@ def make_inference(filename, writeto, create, tilesize = 512,
     tilemap = tile_wsi(wsi, tilesize, writesize, tiledir, overlap, prefix = 'tile')
 
     # Write out map file as npy
-    map_file = os.path.join(exp_home, 'data_tilemap.npy')
+    map_file = os.path.join(exp_home, 'data_tilemap_{}.npy'.format(tilesize))
     np.save(file = map_file, arr = tilemap)
 
     wsi.close()

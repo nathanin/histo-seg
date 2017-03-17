@@ -208,6 +208,9 @@ def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
             print 'Histoseg processing img {} / {}'.format(i, len(imgs))
         
         # Run the network forward once i.e process one image
+        # TODO here convert the proto into an 'input' type and process 
+        #   each image after a series of rotations, and average the results. 
+
         _ = net.forward() 
         pred = net.blobs['prob'].data
         out = np.squeeze(pred) # i.e first image, if a stack  
