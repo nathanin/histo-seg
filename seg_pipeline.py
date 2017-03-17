@@ -13,7 +13,7 @@ from openslide import OpenSlide
 import numpy as np
 
 
-def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID):
+def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID, dev):
     ## Echo inputs
     print "\nRunning histoseg.process: "
     print "Source: {}".format(expdirs[0])
@@ -23,8 +23,11 @@ def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID):
     print "Mode: {}".format(mode)
     print "Running on GPU: {}".format(GPU_ID)
    
-    histoseg.process(exphome, expdirs, model_template, 
-                     weights, mode, GPU_ID)
+    if dev:
+        histoseg.process_dev(expdirs)
+    else:
+        histoseg.process(exphome, expdirs, model_template, 
+                         weights, mode, gpu_id)
 
 
 def make_data_inference(filename, writeto, create, tilesize, 
@@ -74,7 +77,8 @@ def parse_options(**kwargs):
                 'caffe_mode': 0,
                 'GPU_ID': 0,
                 'overlay': True,
-                'tileonly': False}
+                'tileonly': False,
+                'dev': False}
 
     for arg in kwargs:
         print '{} : {}'.format(arg, kwargs[arg])
@@ -118,7 +122,8 @@ def run_inference(do_clean = True, do_parsing = True, **kwargs):
                  args['weights'],
                  args['model_template'],
                  args['caffe_mode'],
-                 args['GPU_ID'])
+                 args['GPU_ID'],
+                 args['dev'])
 
     downsample_overlap = get_downsample_overlap(args['tilesize'],
                                                 args['writesize'],
@@ -179,7 +184,7 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
         scale_ = np.dstack(scale_)
         scale_ = np.mean(scale_, axis = 2)
 
-    
+
 
 def run_multiscale(**kwargs):
     scales = [756, 512, 256]
@@ -200,7 +205,8 @@ def run_multiscale(**kwargs):
     #assemble_full_slide(scales= scales, **kwargs)
 
 
-if __name__ == "__main__":
+
+def dev_mode():
     filename = "/home/nathan/data/pca_wsi/MaZ-001-a.svs"
     writeto = "/home/nathan/histo-seg/pca"
     tilesize = 512
@@ -212,6 +218,7 @@ if __name__ == "__main__":
     model_template = "/home/nathan/histo-seg/code/segnet_basic_inference.prototxt"
     caffe_mode = 0
     GPU_ID = 0
+    dev = True
 
     sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
 
@@ -222,4 +229,10 @@ if __name__ == "__main__":
                    weights = weights,
                    model_template = model_template,
                    remove_first = remove,
-                   overlap = overlap)
+                   overlap = overlap,
+                   dev = dev)
+
+
+
+if __name__ == "__main__":
+    dev_mode()

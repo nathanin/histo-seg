@@ -61,14 +61,14 @@ def define_colors(n = 4):
     print label_colors
     return label_colors
 
-def list_imgs(pth = '.', ext = 'jpg'):
-    search = os.path.join(pth, '*.{}'.format(ext))
+def list_imgs(path = '.', ext = 'jpg'):
+    search = os.path.join(path, '*.{}'.format(ext))
     return sorted(glob.glob(search)) # Returns a sorted list
    
 
-def make_dummy(pth, img):
+def make_dummy(path, img):
     dummy = np.zeros(shape = img.shape, dtype = np.uint8)
-    dname = os.path.join(pth, 'dummy.png')
+    dname = os.path.join(path, 'dummy.png')
     cv2.imwrite(filename = dname, img = dummy)
 
 
@@ -192,7 +192,7 @@ def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
   
     net = init_net(model, weights, mode, GPU_ID)
 
-    imgs = list_imgs(pth = expdirs[0])
+    imgs = list_imgs(path = expdirs[0])
 
 
     # TODO PULL NUMBER OF COLORS FROM NET DEF   
@@ -227,3 +227,23 @@ def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
             cv2.imwrite(filename = write_name, img = x)
             
          
+def process_dev(expdirs):
+    imgs = list_imgs(path = expdirs[0])
+    for i, img in enumerate(imgs):
+        if i % 100 == 0:
+            print 'Histo-DEV processing img {} / {}'.format(i, len(imgs))
+        devimg = cv2.imread(img) 
+        devimg = cv2.cvtColor(devimg, cv2.COLOR_RGB2GRAY) 
+        devimg = devimg[:,:,0] # Not sure if the GRAY is 3-channel
+        
+        write_name_base = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
+        for d in expdirs[1:]:
+            write_name = os.path.join(d, write_name_base)
+            #print write_name, 
+            _, d = os.path.split(d)
+            cv2.imwrite(filename = write_name, img = devimg)
+
+
+
+
+
