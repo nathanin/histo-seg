@@ -11,13 +11,13 @@ import shutil
 
 def run_histoseg(exphome, source, dest, weights, model_template, mode, GPU_ID):
     ## Echo inputs
-    print "\nRunning histoseg.process: "
-    print "Source: {}".format(source)
-    print "Destination: {}".format(dest)
-    print "Model template: {}".format(model_template)
-    print "Weights: {}".format(weights)
-    print "Mode: {}".format(mode)
-    print "Running on GPU: {}".format(GPU_ID)
+    print '\nRunning histoseg.process: '
+    print 'Source: {}'.format(source)
+    print 'Destination: {}'.format(dest)
+    print 'Model template: {}'.format(model_template)
+    print 'Weights: {}'.format(weights)
+    print 'Mode: {}'.format(mode)
+    print 'Running on GPU: {}'.format(GPU_ID)
    
     histoseg.process(exphome, source, dest, model_template, 
                      weights, mode, GPU_ID)
@@ -25,21 +25,21 @@ def run_histoseg(exphome, source, dest, weights, model_template, mode, GPU_ID):
 
 def make_data_inference(filename, writeto, create, tilesize, 
                         writesize, overlap = 0, remove_first = False):
-    print "\nRunning data creation for inference:"
-    print "File: {}".format(filename)
-    print "Destination: {}".format(writeto)
+    print '\nRunning data creation for inference:'
+    print 'File: {}'.format(filename)
+    print 'Destination: {}'.format(writeto)
     return data.make_inference(filename, writeto, create, tilesize, 
                                writesize, overlap, remove_first)
 
  
 def assemble_tiles(result_root, source_dirs, writesize, overlap, overlay):
-    print "\nAssembling tiles:"
-    print "Saving result to : {}".format(result_root)
+    print '\nAssembling tiles:'
+    print 'Saving result to : {}'.format(result_root)
     data.assemble(result_root, source_dirs, writesize, overlap, overlay)
 
 def cleanup(dirs):
     for d in dirs:
-        print "Cleaning {}".format(d)
+        print 'Cleaning {}'.format(d)
         shutil.rmtree(d)
 
 
@@ -51,24 +51,24 @@ def get_downsample_overlap(tilesize, writesize, overlap):
 
 
 def parse_options(**kwargs):
-    print "Parsing arguments: "
+    print 'Parsing arguments: '
 
-    defaults = {"filename": None,
-                "writeto": None,
-                "sub_dirs": ['tiles', 'result'],
-                "tilesize": 512,
-                "writesize": 256,
-                "overlap": 32,
-                "remove_first": False,
-                "weights": None,
-                "model_template": None, 
-                "caffe_mode": 0,
-                "GPU_ID": 0,
-                "overlay": True,
-                "tileonly": False}
+    defaults = {'filename': None,
+                'writeto': None,
+                'sub_dirs': ['tiles', 'result'],
+                'tilesize': 512,
+                'writesize': 256,
+                'overlap': 32,
+                'remove_first': False,
+                'weights': None,
+                'model_template': None, 
+                'caffe_mode': 0,
+                'GPU_ID': 0,
+                'overlay': True,
+                'tileonly': False}
 
     for arg in kwargs:
-        print "{} : {}".format(arg, kwargs[arg])
+        print '{} : {}'.format(arg, kwargs[arg])
         #passed_in[arg] = kwargs[arg]
 
     # Check what is defined, and assign defaults:
@@ -76,16 +76,16 @@ def parse_options(**kwargs):
         if d in kwargs:
             pass
         else:
-            print "Using default value for {}".format(d)
+            print 'Using default value for {}'.format(d)
             kwargs[d] = defaults[d]
 
-    print "\nFinal arg set:"
+    print '\nFinal arg set:'
     for arg in kwargs:
-        print "{} : {}".format(arg, kwargs[arg])
+        print '{} : {}'.format(arg, kwargs[arg])
     
     # Everything's set; paths aren't allowed to be None:
     if None in kwargs.itervalues():
-        raise Exception("All the paths must be set")
+        raise Exception('All the paths must be set')
     return kwargs 
 
 def run_inference(**kwargs):
@@ -100,7 +100,7 @@ def run_inference(**kwargs):
                                                     args['remove_first'])
 
     if args['tileonly']:
-        print "Done processing {}; Returning".format(args['filename'])
+        print 'Done processing {}; Returning'.format(args['filename'])
         return
 
     run_histoseg(exproot, 
@@ -125,31 +125,31 @@ def run_inference(**kwargs):
 
 
 
-if __name__ == "__main__":
-    filename = "/Users/nathaning/Dropbox/SVS/PCA/MaZ-001-a.svs"
-    writeto = "/Users/nathaning/histo-seg/pca"
+if __name__ == '__main__':
+    filename = '/Users/nathaning/Dropbox/SVS/PCA/MaZ-001-a.svs'
+    writeto = '/Users/nathaning/histo-seg/pca'
     tilesize = 512
     writesize = 256 # this remains the dim expected by the network
     overlap = 64
     remove_first = True
 
-    weights = "/Users/nathaning/Dropbox/projects/semantic_pca/weights/pca_segnet_dec7_norm_65000.caffemodel"
-    model_template = "/Users/nathaning/histo-seg/code/segnet_basic_inference.prototxt"
+    weights = '/Users/nathaning/Dropbox/projects/semantic_pca/weights/pca_segnet_dec7_norm_65000.caffemodel'
+    model_template = '/Users/nathaning/histo-seg/code/segnet_basic_inference.prototxt'
     mode = 0 # 0 - GPU, 1 - CPU
     overlay = 1
     GPU_ID = 0
 
-    print ""
+    print ''
     tiledir, exproot, created_dirs = make_data_inference(filename, writeto, 
-            ["tiles", "result", "prob0", "prob1", "prob2", "prob3"], 
+            ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3'], 
             tilesize, writesize, 
             overlap, remove_first)
 
-    print ""
-    print "Experiment root: {}".format(exproot) 
-    print ""
-    #print "Tiles: {}".format(tiledir)
-    #print "Outputs: {}".format(created_dirs)
+    print ''
+    print 'Experiment root: {}'.format(exproot) 
+    print ''
+    #print 'Tiles: {}'.format(tiledir)
+    #print 'Outputs: {}'.format(created_dirs)
     
     #exproot = '/home/nathan/histo-seg/pca/MaZ-001'
     #tiledir = '/home/nathan/histo-seg/pca/MaZ-001/tiles'
