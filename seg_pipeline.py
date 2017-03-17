@@ -26,6 +26,7 @@ def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID):
     histoseg.process(exphome, expdirs, model_template, 
                      weights, mode, GPU_ID)
 
+
 def make_data_inference(filename, writeto, create, tilesize, 
                         writesize, overlap = 0, remove_first = False):
     print '\nRunning data creation for inference:'
@@ -35,41 +36,6 @@ def make_data_inference(filename, writeto, create, tilesize,
                                writesize, overlap, remove_first)
 
 
-def assemble_full_slide(scales= [756, 512, 256], **kwargs):
-    # With N number of scales, average the probability images from each:
-    # The catch:
-    # We have to work on the whole slide at once, it's the only way to be
-    # reasonably sure to align all the scales
-
-    # Still there will be a little bit of disconcordance. Just a bit.
-    exproot = kwargs['writeto']
-    expdirs = kwargs['sub_dirs']
-
-    svsfile = OpenSlide(kwargs['filename'])
-    level_0_dims = svsfile.level_dimensions[2] # common target size; pretty small.
-
-    scaleimages = []
-    for k,s in enumerate(scales):
-        # Pull prob matching the scale
-        probdirs = ['{}_{}'.format(d, s) in expdirs if 'prob' in expdirs]
-
-        # Get the tilemap
-        tilemap = 'data_tilemap_{}.npy'.format(s)
-        m = np.load(tilemap)
-        w,h = m.shape
-
-        # Construct scaled images
-        scaleimages[k] = [data.build_region(region = [0,0,w,h], m = m, source_dir = pd,
-                                place_size = kwargs['writesize'], overlap = kwargs['overlap'],
-                                overlay_dir = '', max_w = level_0_dims[0]) for pd in probdirs]
-
-    # Got all the images like this:
-    # scaleimages = [[prob1_s1, prob2_s1,..], [prob1_s2, prob2_s2,..]]
-    for k,s in enumerate(scales):
-        scale_ = [si[k] for si in scaleimages]
-
-        # Combine them somehow
-
 
 def assemble_tiles(result_root, expdirs, writesize, overlap, overlay,
                    filename, tilesize):
@@ -78,6 +44,7 @@ def assemble_tiles(result_root, expdirs, writesize, overlap, overlay,
     area_cutoff = data.calc_tile_cutoff(filename, tilesize)
     data.assemble(result_root, expdirs, writesize, overlap, 
                   overlay, area_cutoff, tilesize)
+
 
 def cleanup(dirs):
     for d in dirs:
@@ -128,19 +95,19 @@ def parse_options(**kwargs):
         raise Exception('All the paths must be set')
     return kwargs 
 
+
 def run_inference(do_clean = True, do_parsing = True, **kwargs):
     if do_parsing:
         args = parse_options(**kwargs)
     else:
         args = kwargs
-
     exproot, expdirs = make_data_inference(args['filename'],
-                                                    args['writeto'],
-                                                    args['sub_dirs'],
-                                                    args['tilesize'],
-                                                    args['writesize'],
-                                                    args['overlap'],
-                                                    args['remove_first'])
+                                           args['writeto'],
+                                           args['sub_dirs'],
+                                           args['tilesize'],
+                                           args['writesize'],
+                                           args['overlap'],
+                                           args['remove_first'])
 
     if args['tileonly']:
         print 'Done processing {}; Returning'.format(args['filename'])
@@ -174,6 +141,45 @@ def print_arg_set(**kwargs):
     for arg in kwargs:
         print "{} : {}".format(arg, kwargs[arg])
 
+
+def assemble_full_slide(scales= [756, 512, 256], **kwargs):
+    # With N number of scales, average the probability images from each:
+    # The catch:
+    # We have to work on the whole slide at once, it's the only way to be
+    # reasonably sure to align all the scales
+
+    # Still there will be a little bit of disconcordance. Just a bit.
+    exproot = kwargs['writeto']
+    expdirs = kwargs['sub_dirs']
+
+    svsfile = OpenSlide(kwargs['filename'])
+    level_0_dims = svsfile.level_dimensions[2] # common target size; pretty small.
+
+    scaleimages = []
+    for k,s in enumerate(scales):
+        # Pull prob matching the scale
+        probdirs = ['{}_{}'.format(d, s) in expdirs if 'prob' in expdirs]
+
+        # Get the tilemap
+        tilemap = 'data_tilemap_{}.npy'.format(s)
+        m = np.load(tilemap)
+        w,h = m.shape
+
+        # Construct scaled images
+        scaleimages[k] = [data.build_region(region = [0,0,w,h], m = m, source_dir = pd,
+                                place_size = kwargs['writesize'], overlap = kwargs['overlap'],
+                                overlay_dir = '', max_w = level_0_dims[0]) for pd in probdirs]
+
+    # Got all the images like this:
+    # scaleimages = [[prob1_s1, prob2_s1,..], [prob1_s2, prob2_s2,..]]
+    for k,s in enumerate(scales):
+        scale_ = [si[k] for si in scaleimages]
+
+        # Combine them somehow
+        scale_ = np.dstack(scale_)
+        scale_ = np.mean(scale_, axis = 2)
+
+    
 
 def run_multiscale(**kwargs):
     scales = [756, 512, 256]
