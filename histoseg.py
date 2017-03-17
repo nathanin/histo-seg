@@ -10,6 +10,7 @@ import glob
 import cv2
 import inspect
 import numpy as np
+import generate_color
 
 CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
 #CAFFE_ROOT = '/Users/nathaning/caffe-segnet-cudnn5'
@@ -50,8 +51,9 @@ def define_colors(n = 4):
     c1 = [25, 242, 20] # green - g4
     c2 = [35, 35, 220] # blue - BN
     c3 = [255, 255, 255] # white - ST
+    c4 = [210, 150, 20] # white - ST
 
-    label_colors = np.array([c0, c1, c2, c3])
+    label_colors = np.array([c0, c1, c2, c3, c4])
 
     print ""
     print PrintFrame()
@@ -142,32 +144,35 @@ def impose_colors(label, colors):
         unsure = [p0 < cutoff and p1 < cutoff .... pn < cutoff]
         label[unsure] = default
     '''
-def get_output(d, net, colors):
+def get_output(d, pred, out, colors):
     # TODO Add support for BATCHSIZE > 1
-
-    pred = net.blobs['prob'].data
-    out = np.squeeze(pred) # i.e first image, if a stack
     
     #out = np.argmax(out, axis=0) # argmax classifier ; can change
-    if d == 'debug':
-        x = net.blobs['data'].data
-        x = np.squeeze(x)
-        x = np.swapaxes(x, 0, 2)
-        #x = cv2.imread(img)
-        x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)
+    # if d == 'debug':
+    #     x = net.blobs['data'].data
+    #     x = np.squeeze(x)
+    #     x = np.swapaxes(x, 0, 2)
+    #     #x = cv2.imread(img)
+    #     x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)
     
-    elif d == "result":
+    if "result" in d:
         ## Main result ~ label matrix
         #print " doing result task"
         labels = np.argmax(out, axis = 0)
         x = impose_colors(labels, colors)
     
     elif "prob" in d:
-        layer = int(d[-1]) # TODO THIS IS SKEETTCCHHHYY
+        #print "Working in {}\tTODO add a regex to pull correct layer".format(d)
+        #layer = int(d[-1]) # TODO THIS IS SKEETTCCHHHYY -- now its broken
+        layer = int(d[4]) # This will work as long as"
+                          # 1. "prob" is in front &&
+                          # 2. there are only single digit number of classes.         
+        # TODO replace with regex
         x = out[layer,:,:]*255 
     
     elif d == "label":
         ## Same as probability; might have to add an argument
+        # No idea what this was supposed to do . -NI, 3-16-17
         pass
     
     else:
@@ -176,20 +181,23 @@ def get_output(d, net, colors):
     return x
 
 # Default to CPU
-def process(exphome, source, dest, model_template, weights, mode = 1, GPU_ID = 0):
+def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
     
     # Force dest to be a list
-    if isinstance(dest, basestring):
-        dest = [dest]
+    if isinstance(expdirs[1:], basestring):
+        expdirs[1:] = [expdirs[1:]]
 
-    listfile = write_list_densedata(source, exphome)
+    listfile = write_list_densedata(expdirs[0], exphome)
     model = substitute_img_list(model_template, exphome, listfile)
-   
+  
     net = init_net(model, weights, mode, GPU_ID)
 
-    imgs = list_imgs(pth = source)
+    imgs = list_imgs(pth = expdirs[0])
 
-    colors = define_colors(4)
+
+    # TODO PULL NUMBER OF COLORS FROM NET DEF   
+    #colors = define_colors(4)
+    colors = generate_color.hsv(5)
 
     # decide what outputs to give from the length of 'dest'
     # 'dest' should always be a list; take care of that later. (TODO)
@@ -201,15 +209,17 @@ def process(exphome, source, dest, model_template, weights, mode = 1, GPU_ID = 0
         
         # Run the network forward once i.e process one image
         _ = net.forward() 
-        
+        pred = net.blobs['prob'].data
+        out = np.squeeze(pred) # i.e first image, if a stack  
+
         ## Iterate through the list of directories and write in appropriate outputs:
         write_name_base = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
-        for d in dest:
+        for d in expdirs[1:]:
             write_name = os.path.join(d, write_name_base)
             #print write_name, 
             _, d = os.path.split(d)
-            #print d, 
-            x = get_output(d, net, colors)
+            
+            x = get_output(d, pred, out, colors)
 
             cv2.imwrite(filename = write_name, img = x)
             

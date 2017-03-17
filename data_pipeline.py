@@ -46,10 +46,10 @@ def impose_overlay(listfile, dst):
 		os.mkdir(dst)
 
 	lut = np.zeros((256,), dtype = np.uint8)
-	lut[:4] = [135, 240, 78, 15]
+	lut[:5] = [240, 170, 115, 60, 10]
 	# print lut
 	f = open(listfile, 'r')
-	for line in f:
+	for k, line in enumerate(f):
 		# print line.replace('\n','')
 		srcp, annop = line.split()		
 
@@ -64,12 +64,13 @@ def impose_overlay(listfile, dst):
 		img = cv2.convertScaleAbs(img)
 
 		writename = os.path.basename(srcp)
+		if k % 500 == 0:
+			print 'Overlay {}'.format(k)
 		cv2.imwrite(os.path.join(dst, writename), img)
 
 
-
 def make_segmentation_training(src, anno, root):
-	remove_masktxt(anno)
+	# remove_masktxt(anno) # depreciated as of 0.4
 
 	data.multiply_data(src, anno)
 
@@ -82,9 +83,9 @@ if __name__ == "__main__":
    # src = "/Users/nathaning/databases/pca/seg_0.3/feat"
    # anno = "/Users/nathaning/databases/pca/seg_0.3/anno_png"
 
-   root = '/home/nathan/semantic-pca/data/seg_0.3'
-   src = os.path.join(root, 'jpg_norm')
-   anno = os.path.join(root, 'masks_png')
+   root = '/home/nathan/semantic-pca/data/seg_0.5'
+   src = os.path.join(root, 'jpg')
+   anno = os.path.join(root, 'mask')
 
    listfile = make_segmentation_training(src, anno, root)
 

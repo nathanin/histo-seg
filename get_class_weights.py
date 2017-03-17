@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # Get the weights of each class:
-
+# /home/nathan/histo-seg/code/get_class_weights.py
 # f(class) = frequency(class) / < total image area, where class is present >
 # ---> f(class) = frequency(class) / (image_count(class) * 256*256)
 # weight(class) = median of f(class)) / f(class)
@@ -12,8 +12,8 @@ import cv2
 import numpy as np
 
 #imgdir = '/Users/nathaning/databases/ccRCC/for_segnet/mask_sub'
-imgdir = '/home/nathan/semantic-pca/data/prepared_training/dec_6/mask'
-class_num = 4 # range 0-3
+imgdir = '/home/nathan/semantic-pca/data/seg_0.4/mask'
+class_num = 5 # range 0-3
 
 term = os.path.join(imgdir, '*.png')
 imgs = glob.glob(term)

@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
 	remove = True
 
-	tilesize = 256
+	tilesize = 512
 
 	filename = sys.argv[1]
 
