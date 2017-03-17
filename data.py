@@ -83,110 +83,6 @@ def update_map(tilemap, x, y, value):
 
 
 
-'''
-REVISED PSEUDOCODE 
-TODO: IMPLEMENT THIS
-
-it's the opposite of the assembly code.
-
-1. decide how many rows and columns
-    - intialize a counting variable
-    - initialize a map variable
-2. for each row:
-    1. load the row
-    2. move along the row one tilesize - determine if it passes a check
-    3. if it passes the check, write it, increment the counting variable
-    4. Record the position of the passing tile in the map variable
-    5. continue until the whole number of tiles is exhausted
-
-Then, do some A/B tests to see which one's faster !!!!
-The point is to minimize the number of calls to OpenSlide.read_region()
-The theory is that read_region() is relatively slow when invoked in serial
-and that it's performance is overall faster in reading large chunks at once.
-Another piece of assumption is indexing into the np array is faster than read_region()
-
-Maybe there's a performance curve depending on the tile size, or just the number of reads
-which is a function of tile size, and the total image size. IDK.
-
-Maybe it doesn't matter. It's just bothering me. 
-
-Reworked version from tile_wsi.py
-
-    nrow 0) = nrow(lvl)
-    y(0) = factor * y(lvl) ---> factor = y(0) / y(lvl)
-    tilesize(0) = factor * tilesize(lvl)
-    tilesize(0) = y(0) * tilesize(lvl) / y(lvl) (EQ 1)
-
-    Remove logging functions and max_tile functions
-'''
-
-def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
-
-    lvl20x, dim20x = pull_svs_stats(wsi)
-
-    resize_factor = int(wsi.level_downsamples[lvl20x]) # 1 if the slide is 20x
-    
-    # tilesize and overlap given w.r.t. 20X
-    dims_top = wsi.level_dimensions[0]
-    #tile_top = int(dims_top[0] * tilesize / dim20x[0]) # (EQ 1)
-    tile_top = int(dims_top[0] * tilesize / dim20x[0] / np.sqrt(resize_factor)) # (EQ 1)
-    overlap_top = int(overlap * np.sqrt(resize_factor))
-
-    print "Output from : ", PrintFrame()
-    print "tilesize w.r.t. level 0 = {}".format(tile_top)
-    print "tilesize w.r.t. 20x (level {}) = {}".format(lvl20x, tilesize)
-    print "Overlap value w.r.t. level 0 = {}".format(overlap_top)
-    print "Overlap value w.r.t. 20x (level {}) = {}".format(lvl20x, overlap)
-
-    # Whole numbers of tiles: (ASSUME tiles are always square ~~~ )
-    nrow = dims_top[1] / tile_top
-    ncol = dims_top[0] / tile_top
-    
-    # Forego printing slide & tile info 
-    # TODO add pretty print for logging
-
-    # Construct the coordinate lattice:
-    # For overlapping: 1 to X-1: pseudo-shrink the available space 
-    lst = [(k,j) for k in range(1, nrow-1) for j in range(1, ncol-1)]
-    tilemap = np.zeros(shape = (nrow, ncol), dtype = np.uint32)
-    ntiles = len(lst) # == nrow * ncol
-
-
-    # TODO: add block read's and low-res whitespace mapping
-    print ""
-    print "Populating tilemap"
-    print "Created a {} row by {} col lattice over the image".format(nrow, ncol)
-    print "Pulling out squares side length = {}".format(tilesize + 2*overlap)
-    print "Writing into {} squares".format(writesize)
-    written = 0
-    for index, coords in enumerate(lst):
-        if index % 100 == 0:
-            print "{:05d} / {:05d} ({} written so far)".format(index, ntiles, written)
-        # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
-        [y, x] = coords
-
-        name = '{}{:05d}.jpg'.format(prefix, index)
-
-        # Decision: pull from level 0;
-        tile = wsi.read_region(location = (x*tile_top - overlap_top, y*tile_top - overlap_top), 
-                level = 0, 
-                size =(tile_top + 2*overlap_top, tile_top + 2*overlap_top)) 
-        
-        # tile is a PIL.Image:
-        tile = np.array(tile)
-
-        # Decide if the tile is white: If OK, then write it
-        # TODO: add propagating option to do normalization on the whole thing. 
-        # Remove this option here and loop over tiles later - better. 
-        if check_white(tile):
-            filename = os.path.join(writeto, name)
-            write_tile(tile, filename, writesize, normalize = False)
-
-            tilemap = update_map(tilemap, x, y, index)
-            written += 1
-    return tilemap
-
-
 ##################################################################
 ##################################################################
 ###
@@ -329,7 +225,7 @@ def random_crop(h, w, edge):
     return [x, x2, y, y2]
 
 
-def sub_img(img_list, ext, mode = "3ch", edge = 512, writesize = 256, n = 6, coords = 0):
+def sub_img(img_list, ext, mode = "3ch", edge = 512, writesize = 256, n = 8, coords = 0):
     # In contrast to split, do a random crop n times
 
     # img_list = sorted(glob.glob(os.path.join(path, '*.'+ext)))
@@ -453,9 +349,12 @@ def multiply_data(src, anno):
     annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
 
     # Multi-scale
-    for scale in [756, 512, 256]:
-        coords = sub_img(srclist, ext = 'jpg', mode = "3ch", edge = scale); 
-        _ = sub_img(annolist, ext = 'png', mode = "1ch", edge = scale, coords = coords);
+    for scale, numbersub in zip([756, 512, 256], [4, 12, 9]):
+        coords = sub_img(srclist, ext = 'jpg', mode = "3ch", 
+                         edge = scale, n = numbersub); 
+        
+        _ = sub_img(annolist, ext = 'png', mode = "1ch", 
+                    edge = scale, coords = coords, n = numbersub);
 
     # Now it's oK to remove the originals
     delete_list(srclist)
@@ -473,9 +372,84 @@ def find_bcg(wsi):
     pass # make_data.py
 
 
+##################################################################
+##################################################################
+###
+###       ~~~~~~~~~~~~~~~ ASSEMBLE TILES ~~~~~~~~~~~~~~~~~
+###
+##################################################################
+##################################################################
+
+def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
+
+    lvl20x, dim20x = pull_svs_stats(wsi)
+
+    resize_factor = int(wsi.level_downsamples[lvl20x]) # 1 if the slide is 20x
+    
+    # tilesize and overlap given w.r.t. 20X
+    dims_top = wsi.level_dimensions[0]
+    #tile_top = int(dims_top[0] * tilesize / dim20x[0]) # (EQ 1)
+    tile_top = int(dims_top[0] * tilesize / dim20x[0] / np.sqrt(resize_factor)) # (EQ 1)
+    overlap_top = int(overlap * np.sqrt(resize_factor))
+
+    print "Output from : ", PrintFrame()
+    print "tilesize w.r.t. level 0 = {}".format(tile_top)
+    print "tilesize w.r.t. 20x (level {}) = {}".format(lvl20x, tilesize)
+    print "Overlap value w.r.t. level 0 = {}".format(overlap_top)
+    print "Overlap value w.r.t. 20x (level {}) = {}".format(lvl20x, overlap)
+
+    # Whole numbers of tiles: (ASSUME tiles are always square ~~~ )
+    nrow = dims_top[1] / tile_top
+    ncol = dims_top[0] / tile_top
+    
+    # Forego printing slide & tile info 
+    # TODO add pretty print for logging
+
+    # Construct the coordinate lattice:
+    # For overlapping: 1 to X-1: pseudo-shrink the available space 
+    lst = [(k,j) for k in range(1, nrow-1) for j in range(1, ncol-1)]
+    tilemap = np.zeros(shape = (nrow, ncol), dtype = np.uint32)
+    ntiles = len(lst) # == nrow * ncol
+
+
+    # TODO: add block read's and low-res whitespace mapping
+    print ""
+    print "Populating tilemap"
+    print "Created a {} row by {} col lattice over the image".format(nrow, ncol)
+    print "Pulling out squares side length = {}".format(tilesize + 2*overlap)
+    print "Writing into {} squares".format(writesize)
+    written = 0
+    for index, coords in enumerate(lst):
+        if index % 100 == 0:
+            print "{:05d} / {:05d} ({} written so far)".format(index, ntiles, written)
+        # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
+        [y, x] = coords
+
+        name = '{}{:05d}.jpg'.format(prefix, index)
+
+        # Decision: pull from level 0;
+        tile = wsi.read_region(location = (x*tile_top - overlap_top, y*tile_top - overlap_top), 
+                level = 0, 
+                size =(tile_top + 2*overlap_top, tile_top + 2*overlap_top)) 
+        
+        # tile is a PIL.Image:
+        tile = np.array(tile)
+
+        # Decide if the tile is white: If OK, then write it
+        # TODO: add propagating option to do normalization on the whole thing. 
+        # Remove this option here and loop over tiles later - better. 
+        if check_white(tile):
+            filename = os.path.join(writeto, name)
+            write_tile(tile, filename, writesize, normalize = False)
+
+            tilemap = update_map(tilemap, x, y, index)
+            written += 1
+    return tilemap
 
 # TODO fix this logic. It's not good. 
 def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
+    # Really, this asks to remove the 'Tile' root directory
+    # We're always going to clean out the requested sub-dirs.
     tail = os.path.basename(filename)
     slide_name, ex = os.path.splitext(tail)
     exp_home = os.path.join(writeto, slide_name)
@@ -486,8 +460,10 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
 
     # Take care of root first:
     if remove and os.path.exists(exp_home):
-        shutil.rmtree(exp_home)
-        os.makedirs(exp_home)
+        # Clean all of them, even Tile
+        print 'Cleaning up {}'.format(exp_home)
+        _ = [shutil.rmtree(d) for d in created_dirs if os.path.exists(d)]
+        # shutil.rmtree(exp_home) # Can't just haphazardly delete everything that's dum
         use_existing = False
         fresh_dir = True
 
@@ -500,11 +476,9 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
         _ = [os.mkdir(d) for d in created_dirs]
     else:
         # Clear the ones that aren't tile:
-        for d in created_dirs[1:]:
-            if os.path.exists(d):
-                print "Removing {}".format(d)
-                shutil.rmtree(d)
-            os.mkdir(d)
+        print 'Partially cleaning in {}'.format(exp_home)
+        _ = [shutil.rmtree(d) for d in created_dirs[1:] if os.path.exists(d)]
+        _ = [os.mkdir(d) for d in created_dirs[1:]]
     return exp_home, created_dirs, use_existing
 
 
@@ -550,21 +524,14 @@ def make_inference(filename, writeto, create, tilesize = 512,
     tilemap = tile_wsi(wsi, tilesize, writesize, tiledir, overlap, prefix = 'tile')
 
     # Write out map file as npy
-    map_file = os.path.join(exp_home, 'data_tilemap.npy')
+    map_file = os.path.join(exp_home, 'data_tilemap_{}.npy'.format(tilesize))
     np.save(file = map_file, arr = tilemap)
 
     wsi.close()
 
-    return tiledir, exp_home, created_dirs[1:]
+    #returns created_dirs after the first, which should always be 'tile'
+    return exp_home, created_dirs
 
-
-##################################################################
-##################################################################
-###
-###       ~~~~~~~~~~~~~~~ ASSEMBLE TILES ~~~~~~~~~~~~~~~~~
-###
-##################################################################
-##################################################################
 
 def label_regions(m):
     h,w = m.shape
@@ -586,7 +553,6 @@ def get_all_regions(m, threshold = 80):
     threshold is the number of tiles required (should be careful of large tilesizes)
     '''
     regions = []
-
     ll, contours = label_regions(m)
 
     for idx, ct in enumerate(contours):
@@ -688,8 +654,6 @@ def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w 
    
     print PrintFrame(),
     print " x: {} y: {} w: {} h: {}".format(x,y,w,h)
-    #print "Placing {} tiles".format(place_size)
-    #print "Cutting off {} px border".format(overlap)
     # Check if the output will be large
     if w*h*(place_size**2) > (2**31)/3:
         # edit place_size so that the output will fit:
@@ -715,37 +679,52 @@ def build_region(region, m, source_dir, place_size, overlap, overlay_dir, max_w 
     return img
 
 
+def calc_tile_cutoff(filename, tilesize):
+    # Need to find how many tiles make a reasonable area 
+    # Given the level - 0 dimensions
+    f = OpenSlide(filename)
+    lvl0 = f.level_dimensions[0]
+    n_tiles = (lvl0[0]/tilesize) * (lvl0[1]/tilesize)
+
+    return n_tiles / 20
+
+
+
 # TODO this function isn't very good. the place to generalize isn't really obvious to me. 
-def assemble(exp_home, sources, writesize, overlap, overlay):
+def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff, tilesize):
     
     # Force sources to be a list:
-    if isinstance(sources, basestring):
-        sources = [sources]
+    if isinstance(expdirs, basestring):
+        expdirs = [expdirs]
 
     # Pull in the image map:
-    map_file = os.path.join(exp_home, 'data_tilemap.npy')
+    map_file = os.path.join(exp_home, 'data_tilemap_{}.npy'.format(tilesize))
     m = np.load(map_file)
     [N,M] = m.shape # Forego printing
 
     # Pull out disconnected regions that pass a size cutoff:
-    regions = get_all_regions(m, threshold = 5)
+    regions = get_all_regions(m, threshold = area_cutoff)
 
     overlay_dir = ''
     if overlay:
         # Tiles overlaid onto tiles should work fine.
-        overlay_dir = os.path.join(exp_home, 'tiles')
+        overlay_dir = os.path.join(exp_home, expdirs[0])
 
     for index, reg in enumerate(regions):
         # TODO this loop still sucks
         #print PrintFrame(),"Processing region {}".format(index)
-        for src in sources:
+        for src in expdirs[1:]:
             src_base = os.path.basename(src) 
             reg_name = '{:03d}_{}.jpg'.format(index, src_base) 
             
-            #print "Pulling images from {}".format(source_dir)
-            #print "Overlaying onto {}".format(overlay_dir)
+            # if 'prob' in src_base:
+            #     overlay_dir_use = ''  
+            # else:
+            #     overlay_dir_use = overlay_dir
+
             print ""
             print "Region source dir {} ({} of {})".format(src, index+1, len(regions))
+            print "Overlaying from {}".format(overlay_dir)
             img = build_region(reg, m, src, writesize, overlap, overlay_dir) 
             
             reg_name = os.path.join(exp_home, reg_name)

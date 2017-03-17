@@ -1,0 +1,85 @@
+Working in scale: 756
+Parsing arguments: 
+remove_first : True
+writeto : /home/nathan/histo-seg/pca
+tilesize : 512
+sub_dirs : ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+overlap : 64
+filename : /home/nathan/data/pca_wsi/MaZ-001-a.svs
+weights : /home/nathan/semantic-pca/weights/seg_0.4/norm_iter_95000.caffemodel
+model_template : /home/nathan/histo-seg/code/segnet_basic_inference.prototxt
+Using default value for tileonly
+Using default value for overlay
+Using default value for writesize
+Using default value for caffe_mode
+Using default value for GPU_ID
+
+Arg set:
+tileonly : False
+caffe_mode : 0
+remove_first : True
+writeto : /home/nathan/histo-seg/pca
+tilesize : 756
+GPU_ID : 0
+sub_dirs : ['tiles_756', 'result_756', 'prob0_756', 'prob1_756', 'prob2_756', 'prob3_756', 'prob4_756']
+overlap : 64
+filename : /home/nathan/data/pca_wsi/MaZ-001-a.svs
+overlay : True
+weights : /home/nathan/semantic-pca/weights/seg_0.4/norm_iter_95000.caffemodel
+model_template : /home/nathan/histo-seg/code/segnet_basic_inference.prototxt
+writesize : 256
+
+Running data creation for inference:
+File: /home/nathan/data/pca_wsi/MaZ-001-a.svs
+Destination: /home/nathan/histo-seg/pca
+Cleaning up /home/nathan/histo-seg/pca/MaZ-001-a
+Created: /home/nathan/histo-seg/pca/MaZ-001-a/tiles_756
+Created: /home/nathan/histo-seg/pca/MaZ-001-a/result_756
+Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob0_756
+Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob1_756
+Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob2_756
+Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob3_756
+Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob4_756
+Working with slide /home/nathan/data/pca_wsi/MaZ-001-a.svs
+
+Settings _________
+Tilesize: 756
+Write size: 256
+Overlap: 64
+ ------------- end/Settings
+
+Output from :  /home/nathan/histo-seg/code/data.py in tile_wsi @ 395
+tilesize w.r.t. level 0 = 756
+tilesize w.r.t. 20x (level 0) = 756
+Overlap value w.r.t. level 0 = 64
+Overlap value w.r.t. 20x (level 0) = 64
+
+Populating tilemap
+Created a 15 row by 21 col lattice over the image
+Pulling out squares side length = 884
+Writing into 256 squares
+00000 / 00247 (0 written so far)
+00100 / 00247 (68 written so far)
+00200 / 00247 (154 written so far)
+
+Running histoseg.process: 
+Source: /home/nathan/histo-seg/pca/MaZ-001-a/tiles_756
+Destination: ['/home/nathan/histo-seg/pca/MaZ-001-a/result_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob0_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob1_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob2_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob3_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob4_756']
+Model template: /home/nathan/histo-seg/code/segnet_basic_inference.prototxt
+Weights: /home/nathan/semantic-pca/weights/seg_0.4/norm_iter_95000.caffemodel
+Mode: 0
+Running on GPU: 0
+[[255   0   0]
+ [132 255   0]
+ [  0 255 246]
+ [114   0 255]
+ [255   0  24]]
+Histoseg processing img 0 / 174
+Histoseg processing img 100 / 174
+
+Assembling tiles:
+Saving result to : /home/nathan/histo-seg/pca/MaZ-001-a
+
+Region source dir /home/nathan/histo-seg/pca/MaZ-001-a/result_756 (1 of 1)
+Overlaying from /home/nathan/histo-seg/pca/MaZ-001-a/tiles_756
+/home/nathan/histo-seg/code/data.py in build_region @ 655  x: 5 y: 4 w: 51 h: 36
