@@ -27,7 +27,6 @@ def PrintFrame():
     thisline = info.lineno
     return '{} in {} (@ line {})'.format(thisfile, thisfun, thisline)
 
-
 def init_net(model, weights, mode, GPU_ID):
     if mode == 0:
         caffe.set_mode_gpu()
@@ -124,37 +123,10 @@ def impose_colors(label, colors):
     return rgb 
 
 
-    '''
-    This is the collection of if's that controls what gets passed back/written out
 
-    These functions are still really pipeliney.
-
-    If I ever want new types of output, this is a good place to start implementing that.
-
-    The keys are passed through the whole pipeline.py as distinct folders
-    I could say, I want prob3 - meaning the probability image from class #3 
-    That would totally work.
-
-    Figure out a new type of overlay function for the cases like prob, and single class
-    labels that make the most sense as 2D arrays; no 3rd dimension (impose_colors won't work). 
-
-    NEW procedure:
-    if none of the probs is > a cutoff, pick a default class.--
-
-        unsure = [p0 < cutoff and p1 < cutoff .... pn < cutoff]
-        label[unsure] = default
-    '''
 def get_output(d, pred, out, colors):
     # TODO Add support for BATCHSIZE > 1
-    
-    #out = np.argmax(out, axis=0) # argmax classifier ; can change
-    # if d == 'debug':
-    #     x = net.blobs['data'].data
-    #     x = np.squeeze(x)
-    #     x = np.swapaxes(x, 0, 2)
-    #     #x = cv2.imread(img)
-    #     x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)
-    
+
     if "result" in d:
         ## Main result ~ label matrix
         #print " doing result task"
@@ -180,36 +152,24 @@ def get_output(d, pred, out, colors):
 
     return x
 
-# Default to CPU
+
+
 def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
-    
     # Force dest to be a list
     if isinstance(expdirs[1:], basestring):
         expdirs[1:] = [expdirs[1:]]
 
     listfile = write_list_densedata(expdirs[0], exphome)
     model = substitute_img_list(model_template, exphome, listfile)
-  
     net = init_net(model, weights, mode, GPU_ID)
-
     imgs = list_imgs(path = expdirs[0])
 
+    # TODO PULL NUMBER  COLORS FROM NET DEF   
+    colors = generate_color.generate(n = 5, whiteidx = 3)
 
-    # TODO PULL NUMBER OF COLORS FROM NET DEF   
-    #colors = define_colors(4)
-    colors = generate_color.hsv(5)
-
-    # decide what outputs to give from the length of 'dest'
-    # 'dest' should always be a list; take care of that later. (TODO)
-    # main loop:
-    #dest = dest[0]
     for i, img in enumerate(imgs):
         if i % 100 == 0:
             print 'Histoseg processing img {} / {}'.format(i, len(imgs))
-        
-        # Run the network forward once i.e process one image
-        # TODO here convert the proto into an 'input' type and process 
-        #   each image after a series of rotations, and average the results. 
 
         _ = net.forward() 
         pred = net.blobs['prob'].data
@@ -219,22 +179,31 @@ def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
         write_name_base = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
         for d in expdirs[1:]:
             write_name = os.path.join(d, write_name_base)
-            #print write_name, 
             _, d = os.path.split(d)
-            
             x = get_output(d, pred, out, colors)
-
             cv2.imwrite(filename = write_name, img = x)
-            
+          
+    # Clean pycaffe from the GPU  
+    # https://github.com/BVLC/caffe/issues/1702
+    del net
+
+
          
 def process_dev(expdirs):
     imgs = list_imgs(path = expdirs[0])
+
+    print "Output from : ", PrintFrame()
+    print "Found {} images in {}".format(len(imgs), expdirs[0])
+    print "Outputting for:"
+    for d in expdirs[1:]:
+        print "\t\t{}".format(d)
+
     for i, img in enumerate(imgs):
-        if i % 100 == 0:
-            print 'Histo-DEV processing img {} / {}'.format(i, len(imgs))
+        if i % 50 == 0:
+            print 'Histo-DEV processing img {:06d} / {:06d}'.format(i, len(imgs))
         devimg = cv2.imread(img) 
         devimg = cv2.cvtColor(devimg, cv2.COLOR_RGB2GRAY) 
-        devimg = devimg[:,:,0] # Not sure if the GRAY is 3-channel
+        # devimg = devimg[:,:,0] # Not sure if the GRAY is 3-channel
         
         write_name_base = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
         for d in expdirs[1:]:

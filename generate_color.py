@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 ##################################################################
 ##################################################################
 ###
@@ -18,38 +17,23 @@ import matplotlib.colors as colors
 import cv2
 import numpy as np
 
-def jet(N):
+
+def generate(n, whiteidx = 0, cmap = 'Set1'):
     '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct 
     RGB color.'''
-    color_norm  = colors.Normalize(vmin=0, vmax=N-1)
-    scalar_map = cmx.ScalarMappable(norm=color_norm, cmap='jet') 
+    color_norm  = colors.Normalize(vmin=0, vmax=n-1)
+    scalar_map = cmx.ScalarMappable(norm=color_norm, cmap=cmap) 
     def map_index_to_rgb_color(index):
         return scalar_map.to_rgba(index)
 
-    retval = np.zeros(shape = (N, 4))
-    for k in range(N):
+    retval = np.zeros(shape = (n, 4))
+    for k in range(n):
     	retval[k, :] = map_index_to_rgb_color(k)
 
     # Strip the alpha channel 
     retval = retval[:,:3]
 
-    print cv2.convertScaleAbs(retval * 255)
-    return cv2.convertScaleAbs(retval * 255)
-
-def hsv(N):
-    '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct 
-    RGB color.'''
-    color_norm  = colors.Normalize(vmin=0, vmax=N-1)
-    scalar_map = cmx.ScalarMappable(norm=color_norm, cmap='hsv') 
-    def map_index_to_rgb_color(index):
-        return scalar_map.to_rgba(index)
-
-    retval = np.zeros(shape = (N, 4))
-    for k in range(N):
-    	retval[k, :] = map_index_to_rgb_color(k)
-
-    # Strip the alpha channel 
-    retval = retval[:,:3]
-
-    print cv2.convertScaleAbs(retval * 255)
-    return cv2.convertScaleAbs(retval * 255)
+    colors_ = cv2.convertScaleAbs(retval * 255)
+    colors_[whiteidx, :] = [255, 255, 255]
+    print colors_
+    return colors_

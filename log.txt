@@ -1,85 +1,371 @@
-Working in scale: 756
-Parsing arguments: 
-remove_first : True
-writeto : /home/nathan/histo-seg/pca
-tilesize : 512
-sub_dirs : ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
-overlap : 64
-filename : /home/nathan/data/pca_wsi/MaZ-001-a.svs
-weights : /home/nathan/semantic-pca/weights/seg_0.4/norm_iter_95000.caffemodel
-model_template : /home/nathan/histo-seg/code/segnet_basic_inference.prototxt
-Using default value for tileonly
-Using default value for overlay
-Using default value for writesize
-Using default value for caffe_mode
-Using default value for GPU_ID
 
-Arg set:
-tileonly : False
-caffe_mode : 0
-remove_first : True
-writeto : /home/nathan/histo-seg/pca
-tilesize : 756
-GPU_ID : 0
-sub_dirs : ['tiles_756', 'result_756', 'prob0_756', 'prob1_756', 'prob2_756', 'prob3_756', 'prob4_756']
-overlap : 64
-filename : /home/nathan/data/pca_wsi/MaZ-001-a.svs
-overlay : True
-weights : /home/nathan/semantic-pca/weights/seg_0.4/norm_iter_95000.caffemodel
-model_template : /home/nathan/histo-seg/code/segnet_basic_inference.prototxt
-writesize : 256
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 185)]
+	Combining class probabilities across scales
 
-Running data creation for inference:
-File: /home/nathan/data/pca_wsi/MaZ-001-a.svs
-Destination: /home/nathan/histo-seg/pca
-Cleaning up /home/nathan/histo-seg/pca/MaZ-001-a
-Created: /home/nathan/histo-seg/pca/MaZ-001-a/tiles_756
-Created: /home/nathan/histo-seg/pca/MaZ-001-a/result_756
-Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob0_756
-Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob1_756
-Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob2_756
-Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob3_756
-Created: /home/nathan/histo-seg/pca/MaZ-001-a/prob4_756
-Working with slide /home/nathan/data/pca_wsi/MaZ-001-a.svs
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 203)]
+	Gathering scale 798 (1 of 3)
 
-Settings _________
-Tilesize: 756
-Write size: 256
-Overlap: 64
- ------------- end/Settings
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 798
+	M is (14, 19)
+	Original dims: (11444, 15936) , tiles cover: (11172, 15162), downsample (1.0, 4.0)
+	Padding is (68, 193)
 
-Output from :  /home/nathan/histo-seg/code/data.py in tile_wsi @ 395
-tilesize w.r.t. level 0 = 756
-tilesize w.r.t. 20x (level 0) = 756
-Overlap value w.r.t. level 0 = 64
-Overlap value w.r.t. 20x (level 0) = 64
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob0_798
+		x: 0 y: 0 w: 19 h: 14
 
-Populating tilemap
-Created a 15 row by 21 col lattice over the image
-Pulling out squares side length = 884
-Writing into 256 squares
-00000 / 00247 (0 written so far)
-00100 / 00247 (68 written so far)
-00200 / 00247 (154 written so far)
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3584, 5120) != [2861 3984]; resizing
 
-Running histoseg.process: 
-Source: /home/nathan/histo-seg/pca/MaZ-001-a/tiles_756
-Destination: ['/home/nathan/histo-seg/pca/MaZ-001-a/result_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob0_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob1_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob2_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob3_756', '/home/nathan/histo-seg/pca/MaZ-001-a/prob4_756']
-Model template: /home/nathan/histo-seg/code/segnet_basic_inference.prototxt
-Weights: /home/nathan/semantic-pca/weights/seg_0.4/norm_iter_95000.caffemodel
-Mode: 0
-Running on GPU: 0
-[[255   0   0]
- [132 255   0]
- [  0 255 246]
- [114   0 255]
- [255   0  24]]
-Histoseg processing img 0 / 174
-Histoseg processing img 100 / 174
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3584, 5120, 3) --> (2861, 3984)
+	Using padding: (68, 193)
+	New shape: (2668, 3916, 3)
+	Stacking img: (2668, 3916, 3), padw: (2668, 68, 3), padh: (193, 3984, 3)
+	Final size: (2861, 3984, 3)
 
-Assembling tiles:
-Saving result to : /home/nathan/histo-seg/pca/MaZ-001-a
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 798
+	M is (14, 19)
+	Original dims: (11444, 15936) , tiles cover: (11172, 15162), downsample (1.0, 4.0)
+	Padding is (68, 193)
 
-Region source dir /home/nathan/histo-seg/pca/MaZ-001-a/result_756 (1 of 1)
-Overlaying from /home/nathan/histo-seg/pca/MaZ-001-a/tiles_756
-/home/nathan/histo-seg/code/data.py in build_region @ 655  x: 5 y: 4 w: 51 h: 36
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob1_798
+		x: 0 y: 0 w: 19 h: 14
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3584, 5120) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3584, 5120, 3) --> (2861, 3984)
+	Using padding: (68, 193)
+	New shape: (2668, 3916, 3)
+	Stacking img: (2668, 3916, 3), padw: (2668, 68, 3), padh: (193, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 798
+	M is (14, 19)
+	Original dims: (11444, 15936) , tiles cover: (11172, 15162), downsample (1.0, 4.0)
+	Padding is (68, 193)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob2_798
+		x: 0 y: 0 w: 19 h: 14
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3584, 5120) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3584, 5120, 3) --> (2861, 3984)
+	Using padding: (68, 193)
+	New shape: (2668, 3916, 3)
+	Stacking img: (2668, 3916, 3), padw: (2668, 68, 3), padh: (193, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 798
+	M is (14, 19)
+	Original dims: (11444, 15936) , tiles cover: (11172, 15162), downsample (1.0, 4.0)
+	Padding is (68, 193)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob3_798
+		x: 0 y: 0 w: 19 h: 14
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3584, 5120) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3584, 5120, 3) --> (2861, 3984)
+	Using padding: (68, 193)
+	New shape: (2668, 3916, 3)
+	Stacking img: (2668, 3916, 3), padw: (2668, 68, 3), padh: (193, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 798
+	M is (14, 19)
+	Original dims: (11444, 15936) , tiles cover: (11172, 15162), downsample (1.0, 4.0)
+	Padding is (68, 193)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob4_798
+		x: 0 y: 0 w: 19 h: 14
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3584, 5120) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3584, 5120, 3) --> (2861, 3984)
+	Using padding: (68, 193)
+	New shape: (2668, 3916, 3)
+	Stacking img: (2668, 3916, 3), padw: (2668, 68, 3), padh: (193, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 203)]
+	Gathering scale 756 (2 of 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 756
+	M is (15, 21)
+	Original dims: (11444, 15936) , tiles cover: (11340, 15876), downsample (1.0, 4.0)
+	Padding is (26, 15)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob0_756
+		x: 0 y: 0 w: 21 h: 15
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3840, 5632) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3840, 5632, 3) --> (2861, 3984)
+	Using padding: (26, 15)
+	New shape: (2846, 3958, 3)
+	Stacking img: (2846, 3958, 3), padw: (2846, 26, 3), padh: (15, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 756
+	M is (15, 21)
+	Original dims: (11444, 15936) , tiles cover: (11340, 15876), downsample (1.0, 4.0)
+	Padding is (26, 15)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob1_756
+		x: 0 y: 0 w: 21 h: 15
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3840, 5632) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3840, 5632, 3) --> (2861, 3984)
+	Using padding: (26, 15)
+	New shape: (2846, 3958, 3)
+	Stacking img: (2846, 3958, 3), padw: (2846, 26, 3), padh: (15, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 756
+	M is (15, 21)
+	Original dims: (11444, 15936) , tiles cover: (11340, 15876), downsample (1.0, 4.0)
+	Padding is (26, 15)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob2_756
+		x: 0 y: 0 w: 21 h: 15
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3840, 5632) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3840, 5632, 3) --> (2861, 3984)
+	Using padding: (26, 15)
+	New shape: (2846, 3958, 3)
+	Stacking img: (2846, 3958, 3), padw: (2846, 26, 3), padh: (15, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 756
+	M is (15, 21)
+	Original dims: (11444, 15936) , tiles cover: (11340, 15876), downsample (1.0, 4.0)
+	Padding is (26, 15)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob3_756
+		x: 0 y: 0 w: 21 h: 15
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3840, 5632) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3840, 5632, 3) --> (2861, 3984)
+	Using padding: (26, 15)
+	New shape: (2846, 3958, 3)
+	Stacking img: (2846, 3958, 3), padw: (2846, 26, 3), padh: (15, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 756
+	M is (15, 21)
+	Original dims: (11444, 15936) , tiles cover: (11340, 15876), downsample (1.0, 4.0)
+	Padding is (26, 15)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob4_756
+		x: 0 y: 0 w: 21 h: 15
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (3840, 5632) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (3840, 5632, 3) --> (2861, 3984)
+	Using padding: (26, 15)
+	New shape: (2846, 3958, 3)
+	Stacking img: (2846, 3958, 3), padw: (2846, 26, 3), padh: (15, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 203)]
+	Gathering scale 512 (3 of 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 512
+	M is (22, 31)
+	Original dims: (11444, 15936) , tiles cover: (11264, 15872), downsample (1.0, 4.0)
+	Padding is (45, 16)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob0_512
+		x: 0 y: 0 w: 31 h: 22
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (5632, 8192) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (5632, 8192, 3) --> (2861, 3984)
+	Using padding: (45, 16)
+	New shape: (2845, 3939, 3)
+	Stacking img: (2845, 3939, 3), padw: (2845, 45, 3), padh: (16, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 512
+	M is (22, 31)
+	Original dims: (11444, 15936) , tiles cover: (11264, 15872), downsample (1.0, 4.0)
+	Padding is (45, 16)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob1_512
+		x: 0 y: 0 w: 31 h: 22
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (5632, 8192) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (5632, 8192, 3) --> (2861, 3984)
+	Using padding: (45, 16)
+	New shape: (2845, 3939, 3)
+	Stacking img: (2845, 3939, 3), padw: (2845, 45, 3), padh: (16, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 512
+	M is (22, 31)
+	Original dims: (11444, 15936) , tiles cover: (11264, 15872), downsample (1.0, 4.0)
+	Padding is (45, 16)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob2_512
+		x: 0 y: 0 w: 31 h: 22
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (5632, 8192) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (5632, 8192, 3) --> (2861, 3984)
+	Using padding: (45, 16)
+	New shape: (2845, 3939, 3)
+	Stacking img: (2845, 3939, 3), padw: (2845, 45, 3), padh: (16, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 512
+	M is (22, 31)
+	Original dims: (11444, 15936) , tiles cover: (11264, 15872), downsample (1.0, 4.0)
+	Padding is (45, 16)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob3_512
+		x: 0 y: 0 w: 31 h: 22
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (5632, 8192) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (5632, 8192, 3) --> (2861, 3984)
+	Using padding: (45, 16)
+	New shape: (2845, 3939, 3)
+	Stacking img: (2845, 3939, 3), padw: (2845, 45, 3), padh: (16, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in pad_m (@ line 149)]
+	Tile top 512
+	M is (22, 31)
+	Original dims: (11444, 15936) , tiles cover: (11264, 15872), downsample (1.0, 4.0)
+	Padding is (45, 16)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 679]
+	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob4_512
+		x: 0 y: 0 w: 31 h: 22
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 710]
+	Found (5632, 8192) != [2861 3984]; resizing
+
+[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 648]
+	Resising (5632, 8192, 3) --> (2861, 3984)
+	Using padding: (45, 16)
+	New shape: (2845, 3939, 3)
+	Stacking img: (2845, 3939, 3), padw: (2845, 45, 3), padh: (16, 3984, 3)
+	Final size: (2861, 3984, 3)
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 228)]
+	Gathering class 0 (1 of 5)
+	Got 3 images
+img 798 shape: (2861, 3984, 3)
+img 756 shape: (2861, 3984, 3)
+img 512 shape: (2861, 3984, 3)
+	Writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_0_comboimg.jpg
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 228)]
+	Gathering class 1 (2 of 5)
+	Got 3 images
+img 798 shape: (2861, 3984, 3)
+img 756 shape: (2861, 3984, 3)
+img 512 shape: (2861, 3984, 3)
+	Writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_1_comboimg.jpg
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 228)]
+	Gathering class 2 (3 of 5)
+	Got 3 images
+img 798 shape: (2861, 3984, 3)
+img 756 shape: (2861, 3984, 3)
+img 512 shape: (2861, 3984, 3)
+	Writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_2_comboimg.jpg
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 228)]
+	Gathering class 3 (4 of 5)
+	Got 3 images
+img 798 shape: (2861, 3984, 3)
+img 756 shape: (2861, 3984, 3)
+img 512 shape: (2861, 3984, 3)
+	Writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_3_comboimg.jpg
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 228)]
+	Gathering class 4 (5 of 5)
+	Got 3 images
+img 798 shape: (2861, 3984, 3)
+img 756 shape: (2861, 3984, 3)
+img 512 shape: (2861, 3984, 3)
+	Writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_4_comboimg.jpg
+Combining everything into final class image
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 249)]
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 255)]
+	comboclass: (2861, 3984), [0 1 2 3 4]
+[[228  26  28]
+ [ 78 174  75]
+ [255 129   1]
+ [255 255 255]
+ [153 153 153]]
+	Saving to /home/nathan/histo-seg/pca/MaZ-001-a/multiscale_class.jpg
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 265)]
+	Coloring from original rgb: 
+	Saving to /home/nathan/histo-seg/pca/MaZ-001-a/multiscale_colored.jpg
+
+[Output from : seg_pipeline.py in assemble_full_slide (@ line 279)]
+Made it
