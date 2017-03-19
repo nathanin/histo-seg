@@ -143,6 +143,26 @@ def print_arg_set(**kwargs):
 ##################################################################
 ##################################################################
 
+'''
+
+I think I know the problem
+the probelm is 
+since we squish all the tilesizes into the same 256
+there's a discrepancy between the actual area represented in each tile.
+
+So... The solution is to track the proportion of real area, and
+to base the original reconstructed size estimate from that. 
+
+Each tile should go from
+(X, Y) --> (R - r, C - c) --> (R, C)
+if R and C are the dimensions for level 0.
+
+New plan:
+get the pad w.r.t. level 0
+translate the pad down to level [-1]
+oh wait that's what i'm doing now.
+
+'''
 def pad_m(m, tilesize, svsfile):
     # Infer how much of the original was cut given tilesie and dimensions:
     print ''
@@ -158,20 +178,21 @@ def pad_m(m, tilesize, svsfile):
     tile_top = int(leveldims[0][0] * tilesize / leveldims[lvl20][0] / np.sqrt(downsample[lvl20])) # (EQ 1)
     r,c = m.shape
 
-    r0 = h*tile_top
-    c0 = w*tile_top
+    r0 = r*tile_top
+    c0 = c*tile_top
 
-    c_, r_ = leveldims[0]
+    c_, r_ = leveldims[0] # Flipped from the OpenCV convention
+    # This reversal is the source of great confusion for me. 
 
     print '\tTile top {}'.format(tile_top)
     print '\tM is {}'.format(m.shape)
     print '\tOriginal dims: {} , tiles cover: {}, downsample {}'.format(
                                         (r_, c_), (r0, c0), downsample)
-    hpad = int((r_-r0) / np.sqrt(downsample[-1]))
-    wpad = int((c_-c0) / np.sqrt(downsample[-1]))
-  
-    print '\tPadding is {}'.format((hpad, wpad)) 
-    return hpad, wpad 
+    rpad = int((r_ - r0) / np.sqrt(downsample[-1]))
+    cpad = int((c_ - c0) / np.sqrt(downsample[-1]))
+
+    print '\tPadding w.r.t. last level is rows {}, cols {}'.format(rpad, cpad) 
+    return rpad, cpad 
 
 # so ugly
 def assemble_full_slide(scales= [756, 512, 256], **kwargs):
@@ -193,15 +214,16 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
 
     svsfile = OpenSlide(kwargs['filename'])
     level_dims = svsfile.level_dimensions[-1] # common target size; pretty small.
-    # FLIP LEVEL DIMS
     level_dims = np.array(level_dims)
     level_dims = level_dims[::-1]
 
     scaleimages = [None]*len(scales)
     for k,s in enumerate(scales):
+        ds_overlap = get_downsample_overlap(s, kwargs['writesize'], kwargs['overlap'])
         print ''
         print '[Output from : {}]'.format(PrintFrame())
         print '\tGathering scale {} ({} of {})'.format(s, k+1, len(scales))
+        print '\tDownscale overlap: {}'.format(ds_overlap)
 
         # Pull prob matching the scale
         probdirs = [os.path.join(exproot, '{}_{}'.format(d, s))
@@ -209,14 +231,31 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
 
         # Get the tilemap
         tilemap = 'data_tilemap_{}.npy'.format(s)
+        print '\tUsing tilemap {}'.format(tilemap)
         m = np.load(os.path.join(exproot, tilemap))
         h,w = m.shape
 
         # Construct scaled images
         scaleimages[k] = [data.build_region(region = [0,0,w,h], m = m, source_dir = pd,
-                            place_size = kwargs['writesize'], overlap = kwargs['overlap'],
+                            place_size = kwargs['writesize'], overlap = ds_overlap,
                             overlay_dir = '', exactly = level_dims, 
                             pad = pad_m(m, s, svsfile)) for pd in probdirs]
+        print '\tScale {} image: {}'.format(s, scaleimages[k][0].shape)
+
+
+    print ''
+    print '[Output from : {}]'.format(PrintFrame())
+    print '\tWriting class images at each scale'
+    def scale_img_name(c, s, img):
+        tstr = os.path.join(exproot, 'whole_c{}_s{}.jpg'.format(c, s))
+        print '\t{} shape {}'.format(tstr, img.shape)
+        cv2.imwrite(tstr, img)
+
+    print '\tScale images: {}'.format(len(scaleimages))
+    print '\tsclaeimages[0]: {}'.format(len(scaleimages[0]))
+    _ = [scale_img_name(c, s, scaleimages[x][c]) 
+         for c in range(nclass) 
+         for x,s in enumerate(scales)]
 
     # Got all the images like this:
     # scaleimages = [[prob1_s1, prob2_s1,..], [prob1_s2, prob2_s2,..]]
@@ -283,17 +322,17 @@ def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
     scales = [798, 756, 512]
 
-    for s in scales:
-        # Re-parse, I guess
-        print 'Working in scale: {}'.format(s)
-        args = parse_options(**kwargs)
-        # Remove some things
-        args['tilesize'] = s # Override tilesize 
-        args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
-                            for subdir in args['sub_dirs']]
-        args['remove_first'] = True
-        print_arg_set(**args)
-        run_inference(do_clean = False, do_parsing = False, **args)
+    # for s in scales:
+    #     # Re-parse, I guess
+    #     print 'Working in scale: {}'.format(s)
+    #     args = parse_options(**kwargs)
+    #     # Remove some things
+    #     args['tilesize'] = s # Override tilesize 
+    #     args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
+    #                         for subdir in args['sub_dirs']]
+    #     args['remove_first'] = True
+    #     print_arg_set(**args)
+    #     run_inference(do_clean = False, do_parsing = False, **args)
 
     assemble_full_slide(scales= scales, **kwargs)
 

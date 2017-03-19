@@ -399,9 +399,16 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
 
     nrow = dims_top[1] / tile_top
     ncol = dims_top[0] / tile_top
+    print '\tRounding off {} from rows and {} from cols'.format(
+                                    dims_top[1] - nrow*tile_top,
+                                    dims_top[0] - ncol*tile_top)
     
     # 3-17-17 test 0:nrow-1
-    lst = [(k,j) for k in range(1,nrow-1) for j in range(1,ncol-1)]
+    # Removing the first and last causes problems reassembling
+    # The solution is to re-infer all these things at reassembly time
+    # I guess that shouldn't be too hard but it's not something I want to explore
+    # Besides there's really no problem with doing this on the whole thing so I'll keep it. 
+    lst = [(k,j) for k in range(nrow) for j in range(ncol)]
     tilemap = np.zeros(shape = (nrow, ncol), dtype = np.uint32)
     ntiles = len(lst) # == nrow * ncol
 
@@ -432,7 +439,6 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
             written += 1
 
     return tilemap
-
 
 
 
@@ -553,15 +559,6 @@ def get_all_regions(m, threshold = 80):
 
     return regions
 
-
-def partition_rows(m):
-    rows = []
-    n_rows = m.shape[0]
-    for ix in range(n_rows):
-        rows.append(m[ix, :])
-
-    return rows
-
 def empty_block(place_size):
     return np.zeros(shape = (place_size, place_size, 3), dtype = np.uint8)
 
@@ -569,23 +566,16 @@ def empty_block(place_size):
 def load_block(pth, place_size, overlap, interp = cv2.INTER_LINEAR):
     # process overlapping borders...
     # 1. Upsample block to be place_size + 2*overlap
-    # 2. Cut out the middle part
-    #print "Block: {}".format(pth),
+    # 2. Remove the overlapping parts
    
     block = cv2.imread(pth)
     ds_size = block.shape[0]
-
     content = ds_size - 2*overlap
     block = block[overlap : -overlap, overlap : -overlap, :]
-
-    #upsample = overlap*upsample_ratio*2 + content
 
     block = cv2.resize(block, dsize = (place_size, place_size), 
                        interpolation = interp)
 
-    #overlap = overlap*upsample_ratio
-    #print "cutting block: {}".format([overlap, place_size])
-    #return block[overlap : -overlap , overlap : -overlap , :]
     return block
 
 
@@ -594,6 +584,8 @@ def overlay_colors(img, block):
     img = cv2.convertScaleAbs(img)
 
     return img
+
+
 
 
 def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
@@ -642,23 +634,28 @@ def downsize_keep_ratio(img, target_w = 1024, interp = cv2.INTER_NEAREST):
     return img_new
     
 
-def downsize_add_padding(img, target, pad, interp = cv2.INTER_LINEAR):
+def downsize_add_padding(img, target, pad = (0,0), interp = cv2.INTER_AREA):
     # First:
     print ''
     print '[Output from : {}]'.format(PrintFrame())
-    print '\tResising {} --> {}'.format(img.shape, target)
+    print '\tOriginal shape {}'.format(img.shape)
+    print '\tTarget dimensions (final): {}'.format(target)
     print '\tUsing padding: {}'.format(pad)
 
-    h,w,_ = img.shape
-    th, tw = target 
+    r,c,_ = img.shape
+    tr, tc = target 
+    pr, pc = pad
 
     # resize to the right scale
-    img = cv2.resize(img, (tw-pad[0], th-pad[1]), interpolation = interp)
-    print '\tNew shape: {}'.format(img.shape)
+    dc = tc-pc
+    dr = tr-pr
+    print '\tFirst target size: rows: {} cols: {}'.format(dr, dc)
+
+    img = cv2.resize(img, (dc, dr), interpolation = interp)
     if len(img.shape) == 3:
         d = img.shape[2]
-        padw = np.zeros(shape = (th-pad[1], pad[0], d), dtype = img.dtype)
-        padh = np.zeros(shape = (pad[1], tw, d), dtype = img.dtype)
+        padw = np.zeros(shape = (dr, pc, d), dtype = img.dtype)
+        padh = np.zeros(shape = (pr, tc, d), dtype = img.dtype)
     else:
         padw = np.zeros(shape = (tw-pad[1], pad[0]), dtype = img.dtype)
         padh = np.zeros(shape = (pad[1], tw), dtype = img.dtype)
@@ -666,37 +663,48 @@ def downsize_add_padding(img, target, pad, interp = cv2.INTER_LINEAR):
     print '\tStacking img: {}, padw: {}, padh: {}'.format(img.shape, 
                                                           padw.shape, 
                                                           padh.shape)
-    img = np.hstack((img, padw)) # holy crap this nomenclature so confuze
-    img = np.vstack((img, padh)) # confuzeing so much bambooze
+    img = np.hstack((img, padw)) 
+    img = np.vstack((img, padh)) 
 
     print '\tFinal size: {}'.format(img.shape)
     return img
 
+
+def partition_rows(m, h):
+    rows = []
+    for ix in range(h):
+        rows.append(m[ix, :])
+    return rows
+
+
 def build_region(region, m, source_dir, place_size, overlap, 
                  overlay_dir, max_w = 10000, exactly = None, pad = (0,0)):
-    x,y,w,h = region
+    x,y,c,r = region
     print ''
     print '[Output from : {}]'.format(PrintFrame()) 
     print "\tRegion source: {}".format(source_dir)
-    print "\t\tx: {} y: {} w: {} h: {}".format(x,y,w,h)
+    print "\tx: {} y: {} c: {} r: {}".format(x,y,c,r)
 
     # Check if the output will be large
-    if w*h*(place_size**2) > (2**31)/3:
+    if c*r*(place_size**2) > (2**31)/3:
         # edit place_size so that the output will fit:
         print '[Output from : {}]'.format(PrintFrame())
         print "\tFound region > 2**31, resizing to ",
-        place_size = int(np.sqrt(((2**31)/3) / (w*h)))
+        place_size = int(np.sqrt(((2**31)/3) / (c*r)))
         print "\t{}".format(place_size)
 
-    rows = partition_rows(m[y:y+h, x:x+w])
-    
-    built_img = [] # Not really an image; a list of row images
-    for ix, r in enumerate(rows):
-        #print PrintFrame(),"Row {} / {}".format(ix, len(rows))
-        row = build_row(r, source_dir, place_size, overlap, overlay_dir)
-        built_img.append(row)
+    print '\tm is : {}'.format(m.shape)
+    rows = partition_rows(m[y:y+c, x:x+r], r)
+    print '\tFound {} rows'.format(len(rows)) 
 
-    img = assemble_rows(built_img)
+    built_img = [] # Not really an image; a list of row images
+    for ix, row in enumerate(rows):
+        # print '\tRow {}/{}'.format(ix, len(rows))
+        row_ = build_row(row, source_dir, place_size, overlap, overlay_dir)
+        built_img.append(row_)
+
+    #img = assemble_rows(built_img)
+    img = np.hstack(built_img)
 
     # Resize down to something sane for writing:
     #if exactly is not None: max_w = exactly[1]
@@ -704,15 +712,13 @@ def build_region(region, m, source_dir, place_size, overlap,
         if img.shape[1] > max_w:
             print '[Output from : {}]'.format(PrintFrame())
             print "\tFound w > {}; resizing".format(max_w) 
-            img = downsize_keep_ratio(img, max_w, interp = cv2.INTER_LINEAR)
+            img = downsize_keep_ratio(img, max_w, interp = cv2.INTER_AREA)
     elif any(img.shape[:2] != exactly):
         print ''
         print '[Output from : {}]'.format(PrintFrame())
         print "\tFound {} != {}; resizing".format(img.shape[:2], exactly) 
-        w_, h_ = exactly
-        # h_, w_ = exactly
-        #img = cv2.resize(img, (h_, w_), interpolation = cv2.INTER_LINEAR)
-        img = downsize_add_padding(img, (w_, h_), pad)
+        # c_, r_ = exactly
+        img = downsize_add_padding(img, exactly, pad)
 
     return img
 
