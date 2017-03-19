@@ -36,7 +36,9 @@ def PrintFrame():
     thisline = info.lineno
 
     return '{} in {} @ {}'.format(thisfile, thisfun, thisline)
-
+'''
+```````````````` DEBUGGING FUNCTOIN ``````````````````
+'''
 def pull_svs_stats(svs):
     # Specficially for svs files
     app_mag = svs.properties['aperio.AppMag']
@@ -120,7 +122,7 @@ def data_rotate(t, iters, ext = 'jpg', mode = '3ch', writesize = 256):
             img = rotate(img, rotation_matrix)
             cv2.imwrite(filename = name, img = img)
             
-    print 'Done rotating images in {}'.format(t)
+    print '\tDone rotating images in {}'.format(t)
    
 
 def coloration(img, l_mean, l_std):
@@ -147,7 +149,7 @@ def data_coloration(t, mode, ext):
                 img = cv2.imread(name)
                 cv2.imwrite(filename = name_out, img = img)
     
-    print 'Done color augmenting images in {}'.format(t)
+    print '\tDone color augmenting images in {}'.format(t)
                 
 
 
@@ -206,7 +208,7 @@ def split_img(t, ext, mode = "3ch", writesize = 256,tiles = 4):
             #subimg = cv2.resize(subimg, dsize = (writesize, writesize))
             cv2.imwrite(filename = name, img = subimg)
 
-    print 'Done partitioning images in {}'.format(t)                    
+    print '\tDone partitioning images in {}'.format(t)                    
              
 
 def random_crop(h, w, edge):
@@ -395,15 +397,13 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     print "\tOverlap value w.r.t. level 0 = {}".format(overlap_top)
     print "\tOverlap value w.r.t. 20x (level {}) = {}".format(lvl20x, overlap)
 
-    # Whole numbers of tiles: (ASSUME tiles are always square ~~~ )
     nrow = dims_top[1] / tile_top
     ncol = dims_top[0] / tile_top
     
     # 3-17-17 test 0:nrow-1
-    lst = [(k,j) for k in range(nrow) for j in range(ncol)]
+    lst = [(k,j) for k in range(1,nrow-1) for j in range(1,ncol-1)]
     tilemap = np.zeros(shape = (nrow, ncol), dtype = np.uint32)
     ntiles = len(lst) # == nrow * ncol
-
 
     # TODO: add block read's and low-res whitespace mapping
     print ""
@@ -415,7 +415,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     written = 0
     for index, coords in enumerate(lst):
         if index % 100 == 0:
-            print "{:05d} / {:05d} ({} written so far)".format(index, ntiles, written)
+            print "\t{:05d} / {:05d} ({} written so far)".format(index, ntiles, written)
 
         # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
         [y, x] = coords
@@ -451,7 +451,7 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
     # Take care of root first:
     if remove and os.path.exists(exp_home):
         # Clean all of them, even Tile
-        print 'Cleaning up {}'.format(exp_home)
+        print '\tCleaning up {}'.format(exp_home)
         _ = [shutil.rmtree(d) for d in created_dirs if os.path.exists(d)]
         # shutil.rmtree(exp_home) # Can't just haphazardly delete everything that's dum
         use_existing = False
@@ -466,7 +466,7 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
         _ = [os.mkdir(d) for d in created_dirs]
     else:
         # Clear the ones that aren't tile:
-        print 'Partially cleaning in {}'.format(exp_home)
+        print '\tPartially cleaning in {}'.format(exp_home)
         _ = [shutil.rmtree(d) for d in created_dirs[1:] if os.path.exists(d)]
         _ = [os.mkdir(d) for d in created_dirs[1:]]
     return exp_home, created_dirs, use_existing
@@ -493,17 +493,17 @@ def make_inference(filename, writeto, create, tilesize = 512,
         # TODO add in here more feedback for this tree of action.
         # TODO add here checks to see if the written tiles match the requested tiles.
 
-        print "Using existing tiles located {}".format(tiledir)
+        print "\tUsing existing tiles located {}".format(tiledir)
         for d in created_dirs[1:]:
-            print "Created: {}".format(d)
+            print "\tCreated: {}".format(d)
 
         return tiledir, exp_home, created_dirs[1:]
 
     for d in created_dirs:
-        print "Created: {}".format(d)
+        print "\tCreated: {}".format(d)
 
     wsi = OpenSlide(filename)
-    print "Working with slide {}".format(filename)
+    print "\tWorking with slide {}".format(filename)
     
     # Echo the settings:
     print ''
@@ -686,7 +686,7 @@ def build_region(region, m, source_dir, place_size, overlap,
         print '[Output from : {}]'.format(PrintFrame())
         print "\tFound region > 2**31, resizing to ",
         place_size = int(np.sqrt(((2**31)/3) / (w*h)))
-        print "{}".format(place_size)
+        print "\t{}".format(place_size)
 
     rows = partition_rows(m[y:y+h, x:x+w])
     
@@ -763,7 +763,7 @@ def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff, tilesi
             img = build_region(reg, m, src, writesize, overlap, overlay_dir) 
             
             reg_name = os.path.join(exp_home, reg_name)
-            print "Saving region to {}".format(reg_name)
+            print "\tSaving region to {}".format(reg_name)
             cv2.imwrite( reg_name, img )
 
 

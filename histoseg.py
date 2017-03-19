@@ -12,10 +12,9 @@ import inspect
 import numpy as np
 import generate_color
 
-CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
-#CAFFE_ROOT = '/Users/nathaning/caffe-segnet-cudnn5'
-sys.path.insert(0, CAFFE_ROOT+"/python") 
-import caffe
+#CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+# sys.path.insert(0, CAFFE_ROOT+"/python") 
+# import caffe
 
 # Define inspection code that spits out the line it's called from (as str)
 def PrintFrame():
@@ -55,8 +54,8 @@ def define_colors(n = 4):
     label_colors = np.array([c0, c1, c2, c3, c4])
 
     print ""
-    print PrintFrame()
-    print "Using colors:"
+    print '[Output from : {}]'.format(PrintFrame())
+    print "\tUsing colors:"
     print label_colors
     return label_colors
 
@@ -192,25 +191,28 @@ def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
 def process_dev(expdirs):
     imgs = list_imgs(path = expdirs[0])
 
-    print "Output from : ", PrintFrame()
-    print "Found {} images in {}".format(len(imgs), expdirs[0])
-    print "Outputting for:"
+    print '[Output from : {}]'.format(PrintFrame())
+    print "\tFound {} images in {}".format(len(imgs), expdirs[0])
+    print "\tOutputting for:"
     for d in expdirs[1:]:
-        print "\t\t{}".format(d)
+        print "\t{}".format(d)
 
     for i, img in enumerate(imgs):
         if i % 50 == 0:
-            print 'Histo-DEV processing img {:06d} / {:06d}'.format(i, len(imgs))
+            print '\tHisto-DEV processing img {:06d} / {:06d}'.format(i, len(imgs))
         devimg = cv2.imread(img) 
         devimg = cv2.cvtColor(devimg, cv2.COLOR_RGB2GRAY) 
+        devimg = cv2.convertScaleAbs(devimg)
         # devimg = devimg[:,:,0] # Not sure if the GRAY is 3-channel
         
         write_name_base = os.path.basename(img).replace('.jpg', '.png') # Fix magic file types
         for d in expdirs[1:]:
             write_name = os.path.join(d, write_name_base)
+            np_aug = np.random.rand(*devimg.shape)
+            devimg_aug = np.add(devimg*0.5, np_aug)
             #print write_name, 
             _, d = os.path.split(d)
-            cv2.imwrite(filename = write_name, img = devimg)
+            cv2.imwrite(filename = write_name, img = devimg_aug)
 
 
 

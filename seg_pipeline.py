@@ -156,19 +156,19 @@ def pad_m(m, tilesize, svsfile):
         lvl20 = 1
 
     tile_top = int(leveldims[0][0] * tilesize / leveldims[lvl20][0] / np.sqrt(downsample[lvl20])) # (EQ 1)
-    h,w = m.shape
+    r,c = m.shape
 
-    h0 = h*tile_top
-    w0 = w*tile_top
+    r0 = h*tile_top
+    c0 = w*tile_top
 
-    w_, h_ = leveldims[0]
+    c_, r_ = leveldims[0]
 
     print '\tTile top {}'.format(tile_top)
     print '\tM is {}'.format(m.shape)
     print '\tOriginal dims: {} , tiles cover: {}, downsample {}'.format(
-                                        (h_, w_), (h0, w0), downsample)
-    hpad = int((h_-h0) / np.sqrt(downsample[-1]))
-    wpad = int((w_-w0) / np.sqrt(downsample[-1]))
+                                        (r_, c_), (r0, c0), downsample)
+    hpad = int((r_-r0) / np.sqrt(downsample[-1]))
+    wpad = int((c_-c0) / np.sqrt(downsample[-1]))
   
     print '\tPadding is {}'.format((hpad, wpad)) 
     return hpad, wpad 
@@ -220,7 +220,6 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
 
     # Got all the images like this:
     # scaleimages = [[prob1_s1, prob2_s1,..], [prob1_s2, prob2_s2,..]]
-    h_, w_ = level_dims
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(15,15))
     mean_images = [None]*nclass
     for k in range(nclass):
@@ -230,7 +229,7 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
         classim = [si[k] for si in scaleimages]
 
         print '\tGot {} images'.format(len(classim))
-        for kk,x in enumerate(classim): print 'img {} shape: {}'.format(scales[kk], x.shape)
+        for kk,x in enumerate(classim): print '\timg {} shape: {}'.format(scales[kk], x.shape)
 
         # Combine them somehow
         classim = np.dstack(classim)
@@ -255,7 +254,7 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
     print '[Output from : {}]'.format(PrintFrame())
     print '\tcomboclass: {}, {}'.format(comboclass.shape, np.unique(comboclass))
 
-    colors = generate_color.generate(n = nclass, whiteidx = 3)
+    colors = generate_color.generate(n = nclass)
     comboclass = histoseg.impose_colors(comboclass, colors)
     comboname = os.path.join(exproot, 'multiscale_class.jpg')
     print '\tSaving to {}'.format(comboname) 
@@ -274,7 +273,6 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
     print '\tSaving to {}'.format(comboname) 
     cv2.imwrite(comboname, rgb)
 
-
     print ''
     print '[Output from : {}]'.format(PrintFrame())
     print 'Made it'
@@ -285,20 +283,18 @@ def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
     scales = [798, 756, 512]
 
-    # for s in scales:
-    #     # Re-parse, I guess
-    #     print 'Working in scale: {}'.format(s)
-    #     args = parse_options(**kwargs)
+    for s in scales:
+        # Re-parse, I guess
+        print 'Working in scale: {}'.format(s)
+        args = parse_options(**kwargs)
+        # Remove some things
+        args['tilesize'] = s # Override tilesize 
+        args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
+                            for subdir in args['sub_dirs']]
+        args['remove_first'] = True
+        print_arg_set(**args)
+        run_inference(do_clean = False, do_parsing = False, **args)
 
-    #     # Remove some things
-    #     args['tilesize'] = s # Override tilesize 
-    #     args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
-    #                         for subdir in args['sub_dirs']]
-    #     args['remove_first'] = True
-    #     print_arg_set(**args)
-    #     run_inference(do_clean = False, do_parsing = False, **args)
-
-#    # Now all the resolution's and outputs exist
     assemble_full_slide(scales= scales, **kwargs)
 
 
@@ -313,8 +309,12 @@ def run_multiscale(**kwargs):
 
 
 def dev_mode():
-    filename = '/home/nathan/data/pca_wsi/MaZ-001-a.svs'
-    writeto = '/home/nathan/histo-seg/pca'
+    # filename = '/home/nathan/data/pca_wsi/MaZ-001-a.svs'
+    # writeto = '/home/nathan/histo-seg/pca'
+
+    filename = '/Users/nathaning/Dropbox/SVS/PCA/MaZ-001-a.svs'
+    writeto = '/Users/nathaning/_projects/histo-seg/pca'
+
     tilesize = 512
     writesize = 256 # this remains the dim expected by the network
     overlap = 64
@@ -326,7 +326,8 @@ def dev_mode():
     GPU_ID = 0
     dev = True
 
-    sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+    # sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+    sub_dirs = ['tiles', 'result', 'prob0', 'prob1']
 
     run_multiscale(filename = filename,
                    writeto = writeto,
@@ -338,7 +339,8 @@ def dev_mode():
                    remove_first = remove,
                    overlap = overlap,
                    dev = dev,
-                   nclass = 5)
+                   nclass = 2,
+                   whiteidx = 0)
 
 
 
@@ -368,7 +370,8 @@ def run_mode():
                    remove_first = remove,
                    overlap = overlap,
                    dev = dev,
-                   nclass = 5)
+                   nclass = 5,
+                   whiteidx = 0)
 
 
 def parse_options(**kwargs):
@@ -388,7 +391,8 @@ def parse_options(**kwargs):
                 'overlay': True,
                 'tileonly': False,
                 'dev': False,
-                'nclass': 5}
+                'nclass': 5,
+                'whiteidx': 0}
 
     for arg in kwargs:
         print '{} : {}'.format(arg, kwargs[arg])
@@ -408,5 +412,5 @@ def parse_options(**kwargs):
 
 
 if __name__ == '__main__':
-    # dev_mode()
-    run_mode()
+    dev_mode()
+    # run_mode()
