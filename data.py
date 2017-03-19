@@ -640,32 +640,29 @@ def downsize_add_padding(img, target, pad = (0,0), interp = cv2.INTER_AREA):
     print '[Output from : {}]'.format(PrintFrame())
     print '\tOriginal shape {}'.format(img.shape)
     print '\tTarget dimensions (final): {}'.format(target)
-    print '\tUsing padding: {}'.format(pad)
+    print '\tPad at target scale: {}'.format(pad)
 
     r,c,_ = img.shape
     tr, tc = target 
     pr, pc = pad
 
     # resize to the right scale
-    dc = tc-pc
-    dr = tr-pr
-    print '\tFirst target size: rows: {} cols: {}'.format(dr, dc)
+    print '\tGetting padding at reassembled scale'
+    dc = float(c) / tc
+    dr = float(r) / tr
+    pr = int(pr * dr)
+    pc = int(pc * dc)
+    print '\tScaled pad: row: {} col: {}'.format(dr, dc)
 
-    img = cv2.resize(img, (dc, dr), interpolation = interp)
-    if len(img.shape) == 3:
-        d = img.shape[2]
-        padw = np.zeros(shape = (dr, pc, d), dtype = img.dtype)
-        padh = np.zeros(shape = (pr, tc, d), dtype = img.dtype)
-    else:
-        padw = np.zeros(shape = (tw-pad[1], pad[0]), dtype = img.dtype)
-        padh = np.zeros(shape = (pad[1], tw), dtype = img.dtype)
+    padc = np.zeros(shape = (r, pc, 3))
+    print '\tImg: {} padc: {}'.format(img.shape, padc.shape)
+    img = np.hstack((img, padc)) 
 
-    print '\tStacking img: {}, padw: {}, padh: {}'.format(img.shape, 
-                                                          padw.shape, 
-                                                          padh.shape)
-    img = np.hstack((img, padw)) 
-    img = np.vstack((img, padh)) 
+    padr = np.zeros(shape = (pr, c+pc, 3))
+    print '\tImg: {} padr: {}'.format(img.shape, padr.shape)
+    img = np.vstack((img, padr))
 
+    img = cv2.resize(img, (tc, tr), interpolation = interp)
     print '\tFinal size: {}'.format(img.shape)
     return img
 
@@ -694,7 +691,7 @@ def build_region(region, m, source_dir, place_size, overlap,
         print "\t{}".format(place_size)
 
     print '\tm is : {}'.format(m.shape)
-    rows = partition_rows(m[y:y+c, x:x+r], r)
+    rows = partition_rows(m[y:y+r, x:x+c], r)
     print '\tFound {} rows'.format(len(rows)) 
 
     built_img = [] # Not really an image; a list of row images
@@ -703,11 +700,8 @@ def build_region(region, m, source_dir, place_size, overlap,
         row_ = build_row(row, source_dir, place_size, overlap, overlay_dir)
         built_img.append(row_)
 
-    #img = assemble_rows(built_img)
-    img = np.hstack(built_img)
+    img = assemble_rows(built_img)
 
-    # Resize down to something sane for writing:
-    #if exactly is not None: max_w = exactly[1]
     if exactly is None:
         if img.shape[1] > max_w:
             print '[Output from : {}]'.format(PrintFrame())

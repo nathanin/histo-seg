@@ -143,26 +143,7 @@ def print_arg_set(**kwargs):
 ##################################################################
 ##################################################################
 
-'''
 
-I think I know the problem
-the probelm is 
-since we squish all the tilesizes into the same 256
-there's a discrepancy between the actual area represented in each tile.
-
-So... The solution is to track the proportion of real area, and
-to base the original reconstructed size estimate from that. 
-
-Each tile should go from
-(X, Y) --> (R - r, C - c) --> (R, C)
-if R and C are the dimensions for level 0.
-
-New plan:
-get the pad w.r.t. level 0
-translate the pad down to level [-1]
-oh wait that's what i'm doing now.
-
-'''
 def pad_m(m, tilesize, svsfile):
     # Infer how much of the original was cut given tilesie and dimensions:
     print ''
@@ -208,12 +189,12 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
 
     expdirs = kwargs['sub_dirs']
     tail = os.path.basename(kwargs['filename'])
-    slide_name, ex = os.path.splitext(tail)
+    slide_name, ext = os.path.splitext(tail) 
     exproot = os.path.join(kwargs['writeto'], slide_name)
     nclass = kwargs['nclass']
 
     svsfile = OpenSlide(kwargs['filename'])
-    level_dims = svsfile.level_dimensions[-1] # common target size; pretty small.
+    level_dims = svsfile.level_dimensions[-1] 
     level_dims = np.array(level_dims)
     level_dims = level_dims[::-1]
 
@@ -246,71 +227,71 @@ def assemble_full_slide(scales= [756, 512, 256], **kwargs):
     print ''
     print '[Output from : {}]'.format(PrintFrame())
     print '\tWriting class images at each scale'
-    def scale_img_name(c, s, img):
+    def scale_img_write(c, s, img):
         tstr = os.path.join(exproot, 'whole_c{}_s{}.jpg'.format(c, s))
         print '\t{} shape {}'.format(tstr, img.shape)
         cv2.imwrite(tstr, img)
 
     print '\tScale images: {}'.format(len(scaleimages))
     print '\tsclaeimages[0]: {}'.format(len(scaleimages[0]))
-    _ = [scale_img_name(c, s, scaleimages[x][c]) 
+    _ = [scale_img_write(c, s, scaleimages[x][c]) 
          for c in range(nclass) 
          for x,s in enumerate(scales)]
 
     # Got all the images like this:
     # scaleimages = [[prob1_s1, prob2_s1,..], [prob1_s2, prob2_s2,..]]
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(15,15))
-    mean_images = [None]*nclass
-    for k in range(nclass):
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())
-        print '\tGathering class {} ({} of {})'.format(k, k+1, nclass)
-        classim = [si[k] for si in scaleimages]
+    # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(15,15))
+    # mean_images = [None]*nclass
+    # for k in range(nclass):
+    #     print ''
+    #     print '[Output from : {}]'.format(PrintFrame())
+    #     print '\tGathering class {} ({} of {})'.format(k, k+1, nclass)
+    #     classim = [si[k] for si in scaleimages]
 
-        print '\tGot {} images'.format(len(classim))
-        for kk,x in enumerate(classim): print '\timg {} shape: {}'.format(scales[kk], x.shape)
+    #     print '\tGot {} images'.format(len(classim))
+    #     for kk,x in enumerate(classim): print '\timg {} shape: {}'.format(scales[kk], x.shape)
 
-        # Combine them somehow
-        classim = np.dstack(classim)
-        #classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
-        classim = np.mean(classim, axis = 2)
-        classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
+    #     # Combine them somehow
+    #     classim = np.dstack(classim)
+    #     #classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
+    #     classim = np.mean(classim, axis = 2)
+    #     classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
 
-        mean_images[k] = 'class_{}_comboimg.jpg'.format(k)
-        mean_images[k] = os.path.join(exproot, mean_images[k])
-        print '\tWriting to {}'.format(mean_images[k])
-        cv2.imwrite(mean_images[k], classim)
+    #     mean_images[k] = 'class_{}_comboimg.jpg'.format(k)
+    #     mean_images[k] = os.path.join(exproot, mean_images[k])
+    #     print '\tWriting to {}'.format(mean_images[k])
+    #     cv2.imwrite(mean_images[k], classim)
 
 
-    print 'Combining everything into final class image'
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    comboimage = [cv2.imread(mi)[:,:,0] for mi in mean_images]
-    comboimage = np.dstack(comboimage)
-    comboclass = np.argmax(comboimage, axis = 2)
+    # print 'Combining everything into final class image'
+    # print ''
+    # print '[Output from : {}]'.format(PrintFrame())
+    # comboimage = [cv2.imread(mi)[:,:,0] for mi in mean_images]
+    # comboimage = np.dstack(comboimage)
+    # comboclass = np.argmax(comboimage, axis = 2)
 
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tcomboclass: {}, {}'.format(comboclass.shape, np.unique(comboclass))
+    # print ''
+    # print '[Output from : {}]'.format(PrintFrame())
+    # print '\tcomboclass: {}, {}'.format(comboclass.shape, np.unique(comboclass))
 
-    colors = generate_color.generate(n = nclass)
-    comboclass = histoseg.impose_colors(comboclass, colors)
-    comboname = os.path.join(exproot, 'multiscale_class.jpg')
-    print '\tSaving to {}'.format(comboname) 
-    cv2.imwrite(comboname, comboclass)
+    # colors = generate_color.generate(n = nclass)
+    # comboclass = histoseg.impose_colors(comboclass, colors)
+    # comboname = os.path.join(exproot, 'multiscale_class.jpg')
+    # print '\tSaving to {}'.format(comboname) 
+    # cv2.imwrite(comboname, comboclass)
 
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tColoring from original rgb: '
-    # Width and height somehow reverse here. 
-    rgb = svsfile.read_region(location = (0,0),
-                              level = len(svsfile.level_dimensions)-1, 
-                              size = svsfile.level_dimensions[-1])
-    rgb = np.array(rgb)[:,:,:3]
-    rgb = data.overlay_colors(rgb, comboclass)
-    comboname = os.path.join(exproot, 'multiscale_colored.jpg')
-    print '\tSaving to {}'.format(comboname) 
-    cv2.imwrite(comboname, rgb)
+    # print ''
+    # print '[Output from : {}]'.format(PrintFrame())
+    # print '\tColoring from original rgb: '
+    # # Width and height somehow reverse here. 
+    # rgb = svsfile.read_region(location = (0,0),
+    #                           level = len(svsfile.level_dimensions)-1, 
+    #                           size = svsfile.level_dimensions[-1])
+    # rgb = np.array(rgb)[:,:,:3]
+    # rgb = data.overlay_colors(rgb, comboclass)
+    # comboname = os.path.join(exproot, 'multiscale_colored.jpg')
+    # print '\tSaving to {}'.format(comboname) 
+    # cv2.imwrite(comboname, rgb)
 
     print ''
     print '[Output from : {}]'.format(PrintFrame())
