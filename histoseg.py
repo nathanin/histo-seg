@@ -12,9 +12,9 @@ import inspect
 import numpy as np
 import generate_color
 
-#CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
-# sys.path.insert(0, CAFFE_ROOT+"/python") 
-# import caffe
+CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+sys.path.insert(0, CAFFE_ROOT+"/python") 
+import caffe
 
 # Define inspection code that spits out the line it's called from (as str)
 def PrintFrame():

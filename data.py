@@ -39,51 +39,6 @@ def PrintFrame():
 '''
 ```````````````` DEBUGGING FUNCTOIN ``````````````````
 '''
-def pull_svs_stats(svs):
-    # Specficially for svs files
-    app_mag = svs.properties['aperio.AppMag']
-    nlevels = svs.level_count
-    level_dims = svs.level_dimensions
-
-    # Omit print statement
-
-    # Find 20X level:
-    if app_mag == '20': # scanned @ 20X
-        return 0, level_dims[0]
-    if app_mag == '40': # scanned @ 40X
-        return 1, level_dims[1]
-
-
-def check_white(tile, cutoff = 215, pct = 0.75):
-    # True if the tile is mostly non-white
-    # Lower pct ~ more strict
-    gray = cv2.cvtColor(tile, cv2.COLOR_RGBA2GRAY)
-    white = (gray > cutoff).sum() / float(gray.size)
-
-    return white < pct
-
-
-def write_tile(tile, filename, writesize, normalize):
-    # Needed for inference by SegNet
-    tile = cv2.cvtColor(tile, cv2.COLOR_RGBA2RGB) # ???
-    tile = tile[:,:,(2,1,0)] # ???
-
-    tile = cv2.resize(tile, dsize = (writesize, writesize), 
-                      interpolation = cv2.INTER_LINEAR) # Before norm; for speed??
-    if normalize:
-        tile = cnorm.normalize(image = tile, target = None, 
-                               verbose = False)
-   
-    cv2.imwrite(filename = filename, img = tile)
-
-
-def update_map(tilemap, x, y, value):
-    # Record a value at position (x,y) in the 2-array tilemap
-    tilemap[y,x] = value
-
-    return tilemap
-
-
 
 ##################################################################
 ##################################################################
@@ -138,7 +93,7 @@ def data_coloration(t, mode, ext):
     img_list = sorted(glob.glob(os.path.join(t, '*.'+ext)))
     for idx, name in enumerate(img_list):
         if idx % 500 == 0:
-            print "\tcolorizing {} of {}".format(idx, len(img_list))
+            print '\tcolorizing {} of {}'.format(idx, len(img_list))
         for LMN, LSTD in zip(l_mean_range, l_std_range):
             name_out = name.replace('.'+ext, 'c.'+ext)
             if mode == 'feat':
@@ -164,7 +119,7 @@ def writeList(src, anno):
 
 
 
-def split_img(t, ext, mode = "3ch", writesize = 256,tiles = 4):
+def split_img(t, ext, mode = '3ch', writesize = 256,tiles = 4):
     # Split into `tiles` number of sub-regions
     # It help if tiles is a square number.
     # Pull one image, get the dimensions:
@@ -184,9 +139,9 @@ def split_img(t, ext, mode = "3ch", writesize = 256,tiles = 4):
     # remove the original image
     # name-out: tile1 --> tile1s, tile1ss, tile1sss, tile1ssss
     for name in img_list:
-        if mode == "3ch":
+        if mode == '3ch':
             img = cv2.imread(name)
-        elif mode == "1ch":
+        elif mode == '1ch':
             #img = cv2.imread(name, 0)
             img = cv2.imread(name)
             #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
@@ -196,11 +151,11 @@ def split_img(t, ext, mode = "3ch", writesize = 256,tiles = 4):
             r = grid[i, :]
             name = name.replace('.'+ext, 's.'+ext)
 
-            if mode == "3ch":
+            if mode == '3ch':
                 subimg = img[r[0]:r[2], r[1]:r[3], :]
                 subimg = cv2.resize(subimg, dsize = (writesize, writesize),
                                     interpolation = cv2.INTER_NEAREST)
-            elif mode == "1ch":
+            elif mode == '1ch':
                 subimg = img[r[0]:r[2], r[1]:r[3]]
                 subimg = cv2.resize(subimg, dsize = (writesize, writesize), 
                                     interpolation = cv2.INTER_NEAREST)
@@ -227,7 +182,7 @@ def random_crop(h, w, edge):
     return [x, x2, y, y2]
 
 
-def sub_img(img_list, ext, mode = "3ch", edge = 512, writesize = 256, n = 8, coords = 0):
+def sub_img(img_list, ext, mode = '3ch', edge = 512, writesize = 256, n = 8, coords = 0):
     # In contrast to split, do a random crop n times
 
     # img_list = sorted(glob.glob(os.path.join(path, '*.'+ext)))
@@ -265,11 +220,11 @@ def sub_img(img_list, ext, mode = "3ch", edge = 512, writesize = 256, n = 8, coo
             # print '{} : {} \t {} : {}'.format(x,x2,y,y2)
             name = name.replace('.'+ext, 's.'+ext)
 
-            if mode == "3ch":
+            if mode == '3ch':
                 subimg = img[x:x2, y:y2, :]
                 subimg = cv2.resize(subimg, dsize = (writesize, writesize),
                                     interpolation = cv2.INTER_LINEAR)
-            elif mode == "1ch":
+            elif mode == '1ch':
                 subimg = img[x:x2, y:y2, :]
                 subimg = cv2.resize(subimg, dsize = (writesize, writesize), 
                                     interpolation = cv2.INTER_NEAREST)
@@ -309,17 +264,17 @@ def multiply_one_folder(src):
     '''
     I think this is a good idea. 1-26-17
     '''
-    print "\nAffirm that \n {} is not the original dir.".format(src)
-    choice = input("I have made copies (1) or not (anything else) \t");
+    print '\nAffirm that \n {} is not the original dir.'.format(src)
+    choice = input('I have made copies (1) or not (anything else) \t');
     if choice == 1:
-        print "Continuing"
+        print 'Continuing'
     else:
-        print "Make a copy of the data first. TODO make this less dumb."
+        print 'Make a copy of the data first. TODO make this less dumb.'
         return 0 # break
 
-    print "Rotating images in {}".format(src);
+    print 'Rotating images in {}'.format(src);
     data_rotate(src, 3, ext = 'jpg');
-    print "Modulating color for data in {}.".format(src);
+    print 'Modulating color for data in {}.'.format(src);
     data_coloration(src, 'feat', 'jpg');
 
 
@@ -335,13 +290,13 @@ def multiply_data(src, anno):
 
     The goal is to not write a brand new script every time.
     '''
-    print "\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n".format(src, anno) 
-    choice = input("I have made copies. (1/no) ")
+    print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(src, anno) 
+    choice = input('I have made copies. (1/no) ')
 
     if choice == 1:
-        print "Continuing"
+        print 'Continuing'
     else:
-        print "non-1 response. exiting TODO: Make this nicer"
+        print 'non-1 response. exiting TODO: Make this nicer'
         return 0
     # That was important because the following functions write out to the original dirs.
     # I.E. they change the contents.. which is usually a no no. but this time is how it goes.
@@ -351,10 +306,10 @@ def multiply_data(src, anno):
 
     # Multi-scale
     for scale, numbersub in zip([756, 512, 256], [4, 12, 9]):
-        coords = sub_img(srclist, ext = 'jpg', mode = "3ch", 
+        coords = sub_img(srclist, ext = 'jpg', mode = '3ch', 
                          edge = scale, n = numbersub); 
         
-        _ = sub_img(annolist, ext = 'png', mode = "1ch", 
+        _ = sub_img(annolist, ext = 'png', mode = '1ch', 
                     edge = scale, coords = coords, n = numbersub);
 
     # Now it's oK to remove the originals
@@ -364,8 +319,8 @@ def multiply_data(src, anno):
     data_coloration(src, 'feat', 'jpg'); 
     data_coloration(anno, 'anno', 'png');
 
-    data_rotate(src, 3, ext = 'jpg', mode = "3ch"); 
-    data_rotate(anno, 3, ext = 'png', mode = "1ch");
+    data_rotate(src, 3, ext = 'jpg', mode = '3ch'); 
+    data_rotate(anno, 3, ext = 'png', mode = '1ch');
    
 
 
@@ -376,10 +331,53 @@ def find_bcg(wsi):
 ##################################################################
 ##################################################################
 ###
-###       ~~~~~~~~~~~~~~~ TILES ~~~~~~~~~~~~~~~~~
+###       ~~~~~~ Inference from SVS file ~~~~~~~~~
 ###
 ##################################################################
 ##################################################################
+
+def pull_svs_stats(svs):
+    # Specficially for svs files
+    app_mag = svs.properties['aperio.AppMag']
+    nlevels = svs.level_count
+    level_dims = svs.level_dimensions
+
+    # Omit print statement
+
+    # Find 20X level:
+    if app_mag == '20': # scanned @ 20X
+        return 0, level_dims[0]
+    if app_mag == '40': # scanned @ 40X
+        return 1, level_dims[1]
+
+
+def check_white(tile, cutoff = 215, pct = 0.75):
+    # True if the tile is mostly non-white
+    # Lower pct ~ more strict
+    gray = cv2.cvtColor(tile, cv2.COLOR_RGBA2GRAY)
+    white = (gray > cutoff).sum() / float(gray.size)
+
+    return white < pct
+
+
+def write_tile(tile, filename, writesize, normalize):
+    # Needed for inference by SegNet
+    tile = cv2.cvtColor(tile, cv2.COLOR_RGBA2RGB) # ???
+    tile = tile[:,:,(2,1,0)] # ???
+
+    tile = cv2.resize(tile, dsize = (writesize, writesize), 
+                      interpolation = cv2.INTER_LINEAR) # Before norm; for speed??
+    if normalize:
+        tile = cnorm.normalize(image = tile, target = None, 
+                               verbose = False)
+    cv2.imwrite(filename = filename, img = tile)
+
+
+# Record a value at position (x,y) in the 2-array tilemap
+def update_map(tilemap, r, c, value):
+    tilemap[r,c] = value
+    return tilemap
+
 
 def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
 
@@ -392,10 +390,10 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     overlap_top = int(overlap * np.sqrt(resize_factor))
 
     print '[Output from : {}]'.format(PrintFrame())
-    print "\ttilesize w.r.t. level 0 = {}".format(tile_top)
-    print "\ttilesize w.r.t. 20x (level {}) = {}".format(lvl20x, tilesize)
-    print "\tOverlap value w.r.t. level 0 = {}".format(overlap_top)
-    print "\tOverlap value w.r.t. 20x (level {}) = {}".format(lvl20x, overlap)
+    print '\ttilesize w.r.t. level 0 = {}'.format(tile_top)
+    print '\ttilesize w.r.t. 20x (level {}) = {}'.format(lvl20x, tilesize)
+    print '\tOverlap value w.r.t. level 0 = {}'.format(overlap_top)
+    print '\tOverlap value w.r.t. 20x (level {}) = {}'.format(lvl20x, overlap)
 
     nrow = dims_top[1] / tile_top
     ncol = dims_top[0] / tile_top
@@ -407,27 +405,30 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
     # Removing the first and last causes problems reassembling
     # The solution is to re-infer all these things at reassembly time
     # I guess that shouldn't be too hard but it's not something I want to explore
-    # Besides there's really no problem with doing this on the whole thing so I'll keep it. 
-    lst = [(k,j) for k in range(nrow) for j in range(ncol)]
-    tilemap = np.zeros(shape = (nrow, ncol), dtype = np.uint32)
+
+    # The (0,0) coordinate now is eqivalent to (tilesize-overlap, tilesize-overlap)
+    lst = [(k,j) for k in range(1, nrow-1) for j in range(1, ncol-1)]
+    tilemap = np.zeros(shape = (nrow-1, ncol-1), dtype = np.uint32) # -2 to match ^
     ntiles = len(lst) # == nrow * ncol
 
     # TODO: add block read's and low-res whitespace mapping
-    print ""
+    print ''
     print '[Output from : {}]'.format(PrintFrame()) 
-    print "\tPopulating tilemap"
-    print "\tCreated a {} row by {} col lattice over the image".format(nrow, ncol)
-    print "\tPulling out squares side length = {}".format(tilesize + 2*overlap)
-    print "\tWriting into {} squares".format(writesize)
+    print '\tPopulating tilemap'
+    print '\tCreated a {} row by {} col lattice over the image'.format(nrow, ncol)
+    print '\tPulling out squares side length = {}'.format(tile_top + 2*overlap)
+    print '\tWriting into {} squares'.format(writesize)
+    print '\tStarting at row {} col {}'.format(lst[0][0]*tile_top-overlap_top,
+                                               lst[0][1]*tile_top-overlap_top)
     written = 0
     for index, coords in enumerate(lst):
         if index % 100 == 0:
-            print "\t{:05d} / {:05d} ({} written so far)".format(index, ntiles, written)
+            print '\t{:05d} / {:05d} ({} written so far)'.format(index, ntiles, written)
 
         # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
-        [y, x] = coords
+        [r, c] = coords
         name = '{}{:05d}.jpg'.format(prefix, index)
-        tile = wsi.read_region(location = (x*tile_top - overlap_top, y*tile_top - overlap_top), 
+        tile = wsi.read_region(location = (c*tile_top - overlap_top, r*tile_top - overlap_top), 
                                level = 0, 
                                size =(tile_top + 2*overlap_top, tile_top + 2*overlap_top)) 
         tile = np.array(tile)
@@ -435,7 +436,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
         if check_white(tile):
             filename = os.path.join(writeto, name)
             write_tile(tile, filename, writesize, normalize = False)
-            tilemap = update_map(tilemap, x, y, index)
+            tilemap = update_map(tilemap, r, c, index)
             written += 1
 
     return tilemap
@@ -459,7 +460,9 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove = False):
         # Clean all of them, even Tile
         print '\tCleaning up {}'.format(exp_home)
         _ = [shutil.rmtree(d) for d in created_dirs if os.path.exists(d)]
-        # shutil.rmtree(exp_home) # Can't just haphazardly delete everything that's dum
+        # Leave the following here as a warning
+        # Can't just haphazardly delete everything that's dum
+        # shutil.rmtree(exp_home) 
         use_existing = False
         fresh_dir = True
 
@@ -499,26 +502,26 @@ def make_inference(filename, writeto, create, tilesize = 512,
         # TODO add in here more feedback for this tree of action.
         # TODO add here checks to see if the written tiles match the requested tiles.
 
-        print "\tUsing existing tiles located {}".format(tiledir)
+        print '\tUsing existing tiles located {}'.format(tiledir)
         for d in created_dirs[1:]:
-            print "\tCreated: {}".format(d)
+            print '\tCreated: {}'.format(d)
 
         return tiledir, exp_home, created_dirs[1:]
 
     for d in created_dirs:
-        print "\tCreated: {}".format(d)
+        print '\tCreated: {}'.format(d)
 
     wsi = OpenSlide(filename)
-    print "\tWorking with slide {}".format(filename)
+    print '\tWorking with slide {}'.format(filename)
     
     # Echo the settings:
     print ''
     print '[Output from : {}]'.format(PrintFrame()) 
-    print "\tSettings -------------"
-    print "\tTilesize: {}".format(tilesize)
-    print "\tWrite size: {}".format(writesize)
-    print "\tOverlap: {}".format(overlap)
-    print "\t ------------- end/Settings\n"
+    print '\tSettings -------------'
+    print '\tTilesize: {}'.format(tilesize)
+    print '\tWrite size: {}'.format(writesize)
+    print '\tOverlap: {}'.format(overlap)
+    print '\t ------------- end/Settings\n'
     tilemap = tile_wsi(wsi, tilesize, writesize, tiledir, overlap, prefix = 'tile')
 
     # Write out map file as npy
@@ -565,17 +568,19 @@ def empty_block(place_size):
 
 def load_block(pth, place_size, overlap, interp = cv2.INTER_LINEAR):
     # process overlapping borders...
-    # 1. Upsample block to be place_size + 2*overlap
-    # 2. Remove the overlapping parts
-   
-    block = cv2.imread(pth)
-    ds_size = block.shape[0]
-    content = ds_size - 2*overlap
-    block = block[overlap : -overlap, overlap : -overlap, :]
+    # 1. Remove the overlapping parts
+    # 2. Upsample block to be place_size + 2*overlap
+    
+    if not os.path.exists(pth):
+        return None
 
+    block = cv2.imread(pth) # 256 x 256
+    ds_size = block.shape[0]
+    content = ds_size - 2*overlap # 256 - ds_overlap 
+    if overlap > 0:
+        block = block[overlap : -overlap, overlap : -overlap, :]
     block = cv2.resize(block, dsize = (place_size, place_size), 
                        interpolation = interp)
-
     return block
 
 
@@ -584,7 +589,6 @@ def overlay_colors(img, block):
     img = cv2.convertScaleAbs(img)
 
     return img
-
 
 
 
@@ -597,23 +601,22 @@ def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
         if r == 0:
             block = empty_block(place_size)
         else:
-            # TODO fix the hard-coded "tile" prefix and extension suffix: 
+            # TODO fix the hard-coded 'tile' prefix and extension suffix: 
             pth = os.path.join(source_dir, 'tile{:05d}.png'.format(r))
 
             block = load_block(pth, place_size, overlap)
 
             if block is None:
                 print '[Output from : {}]'.format(PrintFrame())
-                print "\timg {} ought to exist but I guess doesn't.".format(pth)
+                print '\timg {} ought to exist but I guess doesnt.'.format(pth)
                 block = empty_block(place_size)
 
             if do_overlay:
-            # TODO fix the hard-coded "tile" prefix and extension suffix: 
+            # TODO fix the hard-coded 'tile' prefix and extension suffix: 
                 ov_pth = os.path.join(overlay_dir, 'tile{:05d}.jpg'.format(r))
                 ov_img = load_block(ov_pth, place_size, overlap)
                 ov_img = cv2.resize(ov_img, dsize = (place_size, place_size))
                 block = overlay_colors(ov_img, block)
-
         row_out = np.append(row_out, block, axis=1) # Sketchhyyyy
 
     return row_out
@@ -625,16 +628,30 @@ def assemble_rows(rows):
     return img
 
 
-def downsize_keep_ratio(img, target_w = 1024, interp = cv2.INTER_NEAREST):
-    factor = img.shape[1]/float(target_w)
-    target_h = int(img.shape[0] / factor)
-
-    img_new = cv2.resize(src = img, dsize = (target_w, target_h), interpolation = interp)
-
+def downsize_keep_ratio(img, dim = 1, target_dim = 1024, interp = cv2.INTER_NEAREST):
+    # dx, dy seems to not work in python implementation .. ?
+    # Since i need this to fit exact numbers, usually i think it's 
+    # a little safer to use the literal values for (r, c)
+    # to avoid rounding errors
+    factor = img.shape[dim]/float(target_dim)
+    if dim == 1:
+        target_h = int(img.shape[0] / factor)
+        img_new = cv2.resize(src = img, dsize = (target_dim, target_h), 
+                             interpolation = interp)
+    elif dim == 0:
+        target_w = int(img.shape[1] / factor)
+        img_new = cv2.resize(src = img, dsize = (target_w, target_dim), 
+                             interpolation = interp)
     return img_new
     
 
-def downsize_add_padding(img, target, pad = (0,0), interp = cv2.INTER_AREA):
+def downsize_add_padding(img, target, pad, prepadding,
+                         interp = cv2.INTER_LINEAR):
+    # This is the function that is supposed to make arbitrary output
+    # and resize it without altering the aspect ratio, and to match target
+
+    # Maybe one way to fix this is to use ratios instead of hard numbers.
+
     # First:
     print ''
     print '[Output from : {}]'.format(PrintFrame())
@@ -642,27 +659,46 @@ def downsize_add_padding(img, target, pad = (0,0), interp = cv2.INTER_AREA):
     print '\tTarget dimensions (final): {}'.format(target)
     print '\tPad at target scale: {}'.format(pad)
 
-    r,c,_ = img.shape
-    tr, tc = target 
-    pr, pc = pad
+    h, w, _ = img.shape
+    x0, y0 = target
+    r0, c0 = pad
+    h0 = x0-r0
+    w0 = y0-c0
 
-    # resize to the right scale
-    print '\tGetting padding at reassembled scale'
-    dc = float(c) / tc
-    dr = float(r) / tr
-    pr = int(pr * dr)
-    pc = int(pc * dc)
-    print '\tScaled pad: row: {} col: {}'.format(dr, dc)
+    r = int((h * r0)/float(h0))
+    c = int((w * c0)/float(w0))
 
-    padc = np.zeros(shape = (r, pc, 3))
-    print '\tImg: {} padc: {}'.format(img.shape, padc.shape)
+    # place in pads
+    padr = np.zeros(shape = (r, w+c, 3))
+    padc = np.zeros(shape = (h, c, 3))
+
     img = np.hstack((img, padc)) 
-
-    padr = np.zeros(shape = (pr, c+pc, 3))
-    print '\tImg: {} padr: {}'.format(img.shape, padr.shape)
     img = np.vstack((img, padr))
 
-    img = cv2.resize(img, (tc, tr), interpolation = interp)
+    img_xy_ratio = img.shape[0] / float(img.shape[1])
+    target_xy_ratio = x0 / float(y0)
+    original_xy_ratio = w / float(h)
+    print '\t#################################################'
+    print ''
+    print '\tOriginal xy ratio: {}'.format(original_xy_ratio)
+    print '\tImage xy ratio: {}'.format(img_xy_ratio)
+    print '\tTarget xy ratio: {}'.format(target_xy_ratio)
+    print ''
+    print '\t#################################################'
+
+
+    ### I guess this should introduce some aspect ratio error..
+    ### Do the smaller one
+    # if img.shape[0] < img.shape[1]:
+    #     img = downsize_keep_ratio(img, dim = 0, target_dim = tr,
+    #                               interp = interp)
+    #     # img = img[:, 0:tc, :]
+    # else:
+    #     img = downsize_keep_ratio(img, dim = 1, target_dim = tc, 
+    #                               interp = interp)
+    #     # img = img[0:tr, :, :]
+
+    img = cv2.resize(img, (y0, x0), interpolation = interp)
     print '\tFinal size: {}'.format(img.shape)
     return img
 
@@ -675,20 +711,25 @@ def partition_rows(m, h):
 
 
 def build_region(region, m, source_dir, place_size, overlap, 
-                 overlay_dir, max_w = 10000, exactly = None, pad = (0,0)):
+                 overlay_dir, max_w = 10000, exactly = None, pad = (0,0),
+                 prepadding = (0,0)):
+    ''' 
+    TODO create exhaustive comments here detail everything. 
+    '''
     x,y,c,r = region
+
     print ''
     print '[Output from : {}]'.format(PrintFrame()) 
-    print "\tRegion source: {}".format(source_dir)
-    print "\tx: {} y: {} c: {} r: {}".format(x,y,c,r)
+    print '\tRegion source: {}'.format(source_dir)
+    print '\tx: {} y: {} c: {} r: {}'.format(x,y,c,r)
 
     # Check if the output will be large
     if c*r*(place_size**2) > (2**31)/3:
         # edit place_size so that the output will fit:
         print '[Output from : {}]'.format(PrintFrame())
-        print "\tFound region > 2**31, resizing to ",
+        print '\tFound region > 2**31, resizing to ',
         place_size = int(np.sqrt(((2**31)/3) / (c*r)))
-        print "\t{}".format(place_size)
+        print '\t{}'.format(place_size)
 
     print '\tm is : {}'.format(m.shape)
     rows = partition_rows(m[y:y+r, x:x+c], r)
@@ -705,14 +746,14 @@ def build_region(region, m, source_dir, place_size, overlap,
     if exactly is None:
         if img.shape[1] > max_w:
             print '[Output from : {}]'.format(PrintFrame())
-            print "\tFound w > {}; resizing".format(max_w) 
-            img = downsize_keep_ratio(img, max_w, interp = cv2.INTER_AREA)
+            print '\tFound w > {}; resizing'.format(max_w) 
+            img = downsize_keep_ratio(img, dim = 1, target_dim = max_w,
+                                      interp = cv2.INTER_AREA)
     elif any(img.shape[:2] != exactly):
         print ''
         print '[Output from : {}]'.format(PrintFrame())
-        print "\tFound {} != {}; resizing".format(img.shape[:2], exactly) 
-        # c_, r_ = exactly
-        img = downsize_add_padding(img, exactly, pad)
+        print '\tFound {} != {}; resizing'.format(img.shape[:2], exactly) 
+        img = downsize_add_padding(img, exactly, pad, prepadding)
 
     return img
 
@@ -750,7 +791,6 @@ def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff, tilesi
 
     for index, reg in enumerate(regions):
         # TODO this loop still sucks
-        #print PrintFrame(),"Processing region {}".format(index)
         for src in expdirs[1:]:
             src_base = os.path.basename(src) 
             reg_name = '{:03d}_{}.jpg'.format(index, src_base) 
@@ -763,7 +803,7 @@ def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff, tilesi
             img = build_region(reg, m, src, writesize, overlap, overlay_dir) 
             
             reg_name = os.path.join(exp_home, reg_name)
-            print "\tSaving region to {}".format(reg_name)
+            print '\tSaving region to {}'.format(reg_name)
             cv2.imwrite( reg_name, img )
 
 
