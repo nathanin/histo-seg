@@ -333,7 +333,7 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
         classim = np.dstack(classim)
         #classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
         classim = np.mean(classim, axis = 2)
-        classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
+        # classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
 
         ### TODO here add in some weighting
         ### Probably pass in a vector of weights or something. 
@@ -385,30 +385,30 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
 
     print ''
     print '[Output from : {}]'.format(PrintFrame())
-        print ' ######################################################################## '
-        print ' ######################################################################## '
+    print ' ######################################################################## '
+    print ' ######################################################################## '
     print '\tMade it'
 
 
 
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
-    scales = [2048, 1024, 512, 256]
+    scales = [1024, 512, 256]
 
-    for s in scales:
-        # Re-parse, I guess
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())  
+    # for s in scales:
+    #     # Re-parse, I guess
+    #     print ''
+    #     print '[Output from : {}]'.format(PrintFrame())  
 
-        args = parse_options(**kwargs)
-        # Remove some things
-        args['tilesize'] = s # Override tilesize 
-        args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
-                            for subdir in args['sub_dirs']]
-        # args['remove_first'] = True
-        print_arg_set(**args)
-        run_inference(do_clean = False, do_parsing = False, 
-                      do_assembly = False, **args)
+    #     args = parse_options(**kwargs)
+    #     # Remove some things
+    #     args['tilesize'] = s # Override tilesize 
+    #     args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
+    #                         for subdir in args['sub_dirs']]
+    #     # args['remove_first'] = True
+    #     print_arg_set(**args)
+    #     run_inference(do_clean = False, do_parsing = False, 
+    #                   do_assembly = False, **args)
 
     if not kwargs['tileonly']:
         print ''

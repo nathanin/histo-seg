@@ -30,6 +30,7 @@ if __name__ == '__main__':
  #                               model_template = model_template,
  #                               remove_first = remove,
  #                               tileonly = True)
+ 
  	seg_pipeline.run_multiscale(filename = filename,
 			                    writeto = writeto,
 			                    sub_dirs = sub_dirs,
