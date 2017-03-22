@@ -1,208 +1,336 @@
 
-[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 190)]
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 221)]
 	Combining class probabilities across scales
 
-[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 209)]
-	Gathering scale 356 (1 of 1)
-	Downscale overlap: 33
-	Using tilemap data_tilemap_356.npy
+ ######################################################################## 
+ ######################################################################## 
 
-[Output from : ./seg_pipeline.py in pad_m (@ line 152)]
-	Tile top 356
-	M is (31, 43)
-	Original dims: (11444, 15936) , tiles cover: (11036, 15308), downsample (1.0, 4.0)
-	Padding w.r.t. last level is rows 204, cols 314
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 243)]
+	Gathering scale 1024 (1 of 2)
+	Downscale overlap: 14
+	Using tilemap data_tilemap_1024.npy
+	m = (38, 54)
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 718]
-	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob0_356
-	x: 0 y: 0 c: 43 r: 31
-	m is : (31, 43)
-	Found 31 rows
+[Output from : ./seg_pipeline.py in pad_m (@ line 177)]
+	Slide detected 20X
+	m = (38, 54)
+	Factor = 16
+	Tile top: 1024 
+	Low level dimensions rows: 2459 cols: 3486
+	ds_tilesize = 64
+	padr = 27 padc = 30
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 750]
-	Found (7936, 11264) != [2861 3984]; resizing
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 273)]
+	Scale: 1024
+	Projected area = [9728, 13824] ratio: 0.703703703704
+	Low level padr: 27 padc: 30
+	Low level dims = (2459, 3486) ratio: 0.705393000574
+	Adjusted low lvl = [2432, 3456] ratio: 0.703703703704
+	Downsample factor = 4.0
+	Writesize = 64
+	New projected area = [2432, 3456] ratio: 0.703703703704
+	Projected padding to add:
+		rows: 27 cols: 30
 
-[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 657]
-	Original shape (7936, 11264, 3)
-	Target dimensions (final): [2861 3984]
-	Pad at target scale: (204, 314)
-	#################################################
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob0_1024
+	x: 0 y: 0 c: 54 r: 38
+	Placing in tiles: 64
+	Using level overlap = 14
+	m is : (38, 54)
+	Found 38 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-	Original xy ratio: 1.41935483871
-	Image xy ratio: 0.698863171669
-	Target xy ratio: 0.71812248996
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-	#################################################
-	Final size: (2861, 3984, 3)
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
 
-[Output from : ./seg_pipeline.py in pad_m (@ line 152)]
-	Tile top 356
-	M is (31, 43)
-	Original dims: (11444, 15936) , tiles cover: (11036, 15308), downsample (1.0, 4.0)
-	Padding w.r.t. last level is rows 204, cols 314
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob1_1024
+	x: 0 y: 0 c: 54 r: 38
+	Placing in tiles: 64
+	Using level overlap = 14
+	m is : (38, 54)
+	Found 38 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 718]
-	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob1_356
-	x: 0 y: 0 c: 43 r: 31
-	m is : (31, 43)
-	Found 31 rows
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 750]
-	Found (7936, 11264) != [2861 3984]; resizing
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
 
-[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 657]
-	Original shape (7936, 11264, 3)
-	Target dimensions (final): [2861 3984]
-	Pad at target scale: (204, 314)
-	#################################################
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob2_1024
+	x: 0 y: 0 c: 54 r: 38
+	Placing in tiles: 64
+	Using level overlap = 14
+	m is : (38, 54)
+	Found 38 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-	Original xy ratio: 1.41935483871
-	Image xy ratio: 0.698863171669
-	Target xy ratio: 0.71812248996
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-	#################################################
-	Final size: (2861, 3984, 3)
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
 
-[Output from : ./seg_pipeline.py in pad_m (@ line 152)]
-	Tile top 356
-	M is (31, 43)
-	Original dims: (11444, 15936) , tiles cover: (11036, 15308), downsample (1.0, 4.0)
-	Padding w.r.t. last level is rows 204, cols 314
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob3_1024
+	x: 0 y: 0 c: 54 r: 38
+	Placing in tiles: 64
+	Using level overlap = 14
+	m is : (38, 54)
+	Found 38 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 718]
-	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob2_356
-	x: 0 y: 0 c: 43 r: 31
-	m is : (31, 43)
-	Found 31 rows
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 750]
-	Found (7936, 11264) != [2861 3984]; resizing
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
 
-[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 657]
-	Original shape (7936, 11264, 3)
-	Target dimensions (final): [2861 3984]
-	Pad at target scale: (204, 314)
-	#################################################
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob4_1024
+	x: 0 y: 0 c: 54 r: 38
+	Placing in tiles: 64
+	Using level overlap = 14
+	m is : (38, 54)
+	Found 38 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-	Original xy ratio: 1.41935483871
-	Image xy ratio: 0.698863171669
-	Target xy ratio: 0.71812248996
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-	#################################################
-	Final size: (2861, 3984, 3)
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
 
-[Output from : ./seg_pipeline.py in pad_m (@ line 152)]
-	Tile top 356
-	M is (31, 43)
-	Original dims: (11444, 15936) , tiles cover: (11036, 15308), downsample (1.0, 4.0)
-	Padding w.r.t. last level is rows 204, cols 314
+ ######################################################################## 
+ ######################################################################## 
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 718]
-	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob3_356
-	x: 0 y: 0 c: 43 r: 31
-	m is : (31, 43)
-	Found 31 rows
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 243)]
+	Gathering scale 512 (2 of 2)
+	Downscale overlap: 25
+	Using tilemap data_tilemap_512.npy
+	m = (76, 108)
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 750]
-	Found (7936, 11264) != [2861 3984]; resizing
+[Output from : ./seg_pipeline.py in pad_m (@ line 177)]
+	Slide detected 20X
+	m = (76, 108)
+	Factor = 16
+	Tile top: 512 
+	Low level dimensions rows: 2459 cols: 3486
+	ds_tilesize = 32
+	padr = 27 padc = 30
 
-[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 657]
-	Original shape (7936, 11264, 3)
-	Target dimensions (final): [2861 3984]
-	Pad at target scale: (204, 314)
-	#################################################
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 273)]
+	Scale: 512
+	Projected area = [19456, 27648] ratio: 0.703703703704
+	Low level padr: 27 padc: 30
+	Low level dims = (2459, 3486) ratio: 0.705393000574
+	Adjusted low lvl = [2432, 3456] ratio: 0.703703703704
+	Downsample factor = 8.0
+	Writesize = 32
+	New projected area = [2432, 3456] ratio: 0.703703703704
+	Projected padding to add:
+		rows: 27 cols: 30
 
-	Original xy ratio: 1.41935483871
-	Image xy ratio: 0.698863171669
-	Target xy ratio: 0.71812248996
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob0_512
+	x: 0 y: 0 c: 108 r: 76
+	Placing in tiles: 32
+	Using level overlap = 25
+	m is : (76, 108)
+	Found 76 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-	#################################################
-	Final size: (2861, 3984, 3)
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-[Output from : ./seg_pipeline.py in pad_m (@ line 152)]
-	Tile top 356
-	M is (31, 43)
-	Original dims: (11444, 15936) , tiles cover: (11036, 15308), downsample (1.0, 4.0)
-	Padding w.r.t. last level is rows 204, cols 314
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 718]
-	Region source: /home/nathan/histo-seg/pca/MaZ-001-a/prob4_356
-	x: 0 y: 0 c: 43 r: 31
-	m is : (31, 43)
-	Found 31 rows
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob1_512
+	x: 0 y: 0 c: 108 r: 76
+	Placing in tiles: 32
+	Using level overlap = 25
+	m is : (76, 108)
+	Found 76 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 750]
-	Found (7936, 11264) != [2861 3984]; resizing
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-[Output from : /home/nathan/histo-seg/code/data.py in downsize_add_padding @ 657]
-	Original shape (7936, 11264, 3)
-	Target dimensions (final): [2861 3984]
-	Pad at target scale: (204, 314)
-	#################################################
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
 
-	Original xy ratio: 1.41935483871
-	Image xy ratio: 0.698863171669
-	Target xy ratio: 0.71812248996
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob2_512
+	x: 0 y: 0 c: 108 r: 76
+	Placing in tiles: 32
+	Using level overlap = 25
+	m is : (76, 108)
+	Found 76 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
 
-	#################################################
-	Final size: (2861, 3984, 3)
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
 
-[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 232)]
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob3_512
+	x: 0 y: 0 c: 108 r: 76
+	Placing in tiles: 32
+	Using level overlap = 25
+	m is : (76, 108)
+	Found 76 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
+
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 684]
+	Region source: /home/nathan/histo-seg/pca/swartwoods/prob4_512
+	x: 0 y: 0 c: 108 r: 76
+	Placing in tiles: 32
+	Using level overlap = 25
+	m is : (76, 108)
+	Found 76 rows
+	Image shape: (2432, 3456, 3)
+	Exact shape: (2459, 3486)
+
+[Output from : /home/nathan/histo-seg/code/data.py in build_region @ 719]
+	Found img (2432, 3456) != target (2459, 3486); padding
+
+[Output from : /home/nathan/histo-seg/code/data.py in add_padding @ 657]
+	Image: (2432, 3456, 3)
+	Target: (2459, 3486)
+	Column pad: (2432, 30, 3)
+	Row pad: (27, 3486, 3)
+	Final shape (2459, 3486, 3)
+
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 301)]
 	Writing class images at each scale
-	Scale images: 1
+	Scale images: 2
 	sclaeimages[0]: 5
-	/home/nathan/histo-seg/pca/MaZ-001-a/whole_c0_s356.jpg shape (2861, 3984, 3)
-	/home/nathan/histo-seg/pca/MaZ-001-a/whole_c1_s356.jpg shape (2861, 3984, 3)
-	/home/nathan/histo-seg/pca/MaZ-001-a/whole_c2_s356.jpg shape (2861, 3984, 3)
-	/home/nathan/histo-seg/pca/MaZ-001-a/whole_c3_s356.jpg shape (2861, 3984, 3)
-	/home/nathan/histo-seg/pca/MaZ-001-a/whole_c4_s356.jpg shape (2861, 3984, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c0_s1024.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c0_s512.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c1_s1024.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c1_s512.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c2_s1024.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c2_s512.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c3_s1024.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c3_s512.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c4_s1024.jpg shape (2459, 3486, 3)
+	/home/nathan/histo-seg/pca/swartwoods/whole_c4_s512.jpg shape (2459, 3486, 3)
 
-[output from : ./seg_pipeline.py in assemble_full_slide (@ line 252)]
+[output from : ./seg_pipeline.py in assemble_full_slide (@ line 321)]
 	gathering class 0 (1 of 5)
-	got 1 images
-	img 356 shape: (2861, 3984, 3)
-	writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_0_comboimg.jpg
+	got 2 images
+	img 1024 shape: (2459, 3486, 3)
+	img 512 shape: (2459, 3486, 3)
+	writing to /home/nathan/histo-seg/pca/swartwoods/class_0_comboimg.jpg
 
-[output from : ./seg_pipeline.py in assemble_full_slide (@ line 252)]
+[output from : ./seg_pipeline.py in assemble_full_slide (@ line 321)]
 	gathering class 1 (2 of 5)
-	got 1 images
-	img 356 shape: (2861, 3984, 3)
-	writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_1_comboimg.jpg
+	got 2 images
+	img 1024 shape: (2459, 3486, 3)
+	img 512 shape: (2459, 3486, 3)
+	writing to /home/nathan/histo-seg/pca/swartwoods/class_1_comboimg.jpg
 
-[output from : ./seg_pipeline.py in assemble_full_slide (@ line 252)]
+[output from : ./seg_pipeline.py in assemble_full_slide (@ line 321)]
 	gathering class 2 (3 of 5)
-	got 1 images
-	img 356 shape: (2861, 3984, 3)
-	writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_2_comboimg.jpg
+	got 2 images
+	img 1024 shape: (2459, 3486, 3)
+	img 512 shape: (2459, 3486, 3)
+	writing to /home/nathan/histo-seg/pca/swartwoods/class_2_comboimg.jpg
 
-[output from : ./seg_pipeline.py in assemble_full_slide (@ line 252)]
+[output from : ./seg_pipeline.py in assemble_full_slide (@ line 321)]
 	gathering class 3 (4 of 5)
-	got 1 images
-	img 356 shape: (2861, 3984, 3)
-	writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_3_comboimg.jpg
+	got 2 images
+	img 1024 shape: (2459, 3486, 3)
+	img 512 shape: (2459, 3486, 3)
+	writing to /home/nathan/histo-seg/pca/swartwoods/class_3_comboimg.jpg
 
-[output from : ./seg_pipeline.py in assemble_full_slide (@ line 252)]
+[output from : ./seg_pipeline.py in assemble_full_slide (@ line 321)]
 	gathering class 4 (5 of 5)
-	got 1 images
-	img 356 shape: (2861, 3984, 3)
-	writing to /home/nathan/histo-seg/pca/MaZ-001-a/class_4_comboimg.jpg
+	got 2 images
+	img 1024 shape: (2459, 3486, 3)
+	img 512 shape: (2459, 3486, 3)
+	writing to /home/nathan/histo-seg/pca/swartwoods/class_4_comboimg.jpg
 
-[output from : ./seg_pipeline.py in assemble_full_slide (@ line 272)]
+[output from : ./seg_pipeline.py in assemble_full_slide (@ line 341)]
 	combining everything into final class image
 	Comboimage is 5 long
 
-[output from : ./seg_pipeline.py in assemble_full_slide (@ line 280)]
-	comboclass: (2861, 3984), [0 1 2 3 4]
-[[  0   0 255]
- [128   0 127]
- [254   1   0]
- [255 255 255]
- [  0 255   0]]
-	saving to /home/nathan/histo-seg/pca/MaZ-001-a/multiscale_class.jpg
+[output from : ./seg_pipeline.py in assemble_full_slide (@ line 349)]
+	comboclass: (2459, 3486), [0 1 2 3 4]
+	saving to /home/nathan/histo-seg/pca/swartwoods/multiscale_class.jpg
 
-[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 291)]
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 360)]
 	coloring from original rgb: 
-	saving to /home/nathan/histo-seg/pca/MaZ-001-a/multiscale_colored.jpg
+	Loaded RGB from level 2 sized (2459, 3486)
+	saving to /home/nathan/histo-seg/pca/swartwoods/multiscale_colored.jpg
 
-[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 305)]
+[Output from : ./seg_pipeline.py in assemble_full_slide (@ line 378)]
+ ############################################################
+ ############################################################
+ ############################################################
+ ############################################################
+ ############################################################
+ ############################################################
+ ############################################################
 	Made it

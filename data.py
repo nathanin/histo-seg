@@ -339,7 +339,6 @@ def find_bcg(wsi):
 def pull_svs_stats(svs):
     # Specficially for svs files
     app_mag = svs.properties['aperio.AppMag']
-    nlevels = svs.level_count
     level_dims = svs.level_dimensions
 
     # Omit print statement
@@ -408,7 +407,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap = 0, prefix = 'tile'):
 
     # The (0,0) coordinate now is eqivalent to (tilesize-overlap, tilesize-overlap)
     lst = [(k,j) for k in range(1, nrow-1) for j in range(1, ncol-1)]
-    tilemap = np.zeros(shape = (nrow-1, ncol-1), dtype = np.uint32) # -2 to match ^
+    tilemap = np.zeros(shape = (nrow, ncol), dtype = np.uint32) 
     ntiles = len(lst) # == nrow * ncol
 
     # TODO: add block read's and low-res whitespace mapping
@@ -506,7 +505,7 @@ def make_inference(filename, writeto, create, tilesize = 512,
         for d in created_dirs[1:]:
             print '\tCreated: {}'.format(d)
 
-        return tiledir, exp_home, created_dirs[1:]
+        return tiledir, created_dirs
 
     for d in created_dirs:
         print '\tCreated: {}'.format(d)
@@ -579,6 +578,8 @@ def load_block(pth, place_size, overlap, interp = cv2.INTER_LINEAR):
     content = ds_size - 2*overlap # 256 - ds_overlap 
     if overlap > 0:
         block = block[overlap : -overlap, overlap : -overlap, :]
+
+    ## Upsample block to be exactly place_size, after removing the overlap.
     block = cv2.resize(block, dsize = (place_size, place_size), 
                        interpolation = interp)
     return block
@@ -590,20 +591,14 @@ def overlay_colors(img, block):
 
     return img
 
-
-
 def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
     do_overlay = os.path.exists(overlay_dir)
 
-    #TODO See if we can do it without initializing with empty col on the left :
-    row_out = empty_block(place_size)
-    for r in row:
+    def load_or_empty(r):
         if r == 0:
             block = empty_block(place_size)
         else:
-            # TODO fix the hard-coded 'tile' prefix and extension suffix: 
             pth = os.path.join(source_dir, 'tile{:05d}.png'.format(r))
-
             block = load_block(pth, place_size, overlap)
 
             if block is None:
@@ -617,8 +612,13 @@ def build_row(row, source_dir, place_size,  overlap, overlay_dir = ''):
                 ov_img = load_block(ov_pth, place_size, overlap)
                 ov_img = cv2.resize(ov_img, dsize = (place_size, place_size))
                 block = overlay_colors(ov_img, block)
-        row_out = np.append(row_out, block, axis=1) # Sketchhyyyy
 
+        return block
+
+
+    #TODO See if we can do it without initializing with empty col on the left :
+    row_out = [load_or_empty(r) for r in row]
+    row_out = np.hstack(row_out)
     return row_out
     
 def assemble_rows(rows):
@@ -643,64 +643,6 @@ def downsize_keep_ratio(img, dim = 1, target_dim = 1024, interp = cv2.INTER_NEAR
         img_new = cv2.resize(src = img, dsize = (target_w, target_dim), 
                              interpolation = interp)
     return img_new
-    
-
-def downsize_add_padding(img, target, pad, prepadding,
-                         interp = cv2.INTER_LINEAR):
-    # This is the function that is supposed to make arbitrary output
-    # and resize it without altering the aspect ratio, and to match target
-
-    # Maybe one way to fix this is to use ratios instead of hard numbers.
-
-    # First:
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tOriginal shape {}'.format(img.shape)
-    print '\tTarget dimensions (final): {}'.format(target)
-    print '\tPad at target scale: {}'.format(pad)
-
-    h, w, _ = img.shape
-    x0, y0 = target
-    r0, c0 = pad
-    h0 = x0-r0
-    w0 = y0-c0
-
-    r = int((h * r0)/float(h0))
-    c = int((w * c0)/float(w0))
-
-    # place in pads
-    padr = np.zeros(shape = (r, w+c, 3))
-    padc = np.zeros(shape = (h, c, 3))
-
-    img = np.hstack((img, padc)) 
-    img = np.vstack((img, padr))
-
-    img_xy_ratio = img.shape[0] / float(img.shape[1])
-    target_xy_ratio = x0 / float(y0)
-    original_xy_ratio = w / float(h)
-    print '\t#################################################'
-    print ''
-    print '\tOriginal xy ratio: {}'.format(original_xy_ratio)
-    print '\tImage xy ratio: {}'.format(img_xy_ratio)
-    print '\tTarget xy ratio: {}'.format(target_xy_ratio)
-    print ''
-    print '\t#################################################'
-
-
-    ### I guess this should introduce some aspect ratio error..
-    ### Do the smaller one
-    # if img.shape[0] < img.shape[1]:
-    #     img = downsize_keep_ratio(img, dim = 0, target_dim = tr,
-    #                               interp = interp)
-    #     # img = img[:, 0:tc, :]
-    # else:
-    #     img = downsize_keep_ratio(img, dim = 1, target_dim = tc, 
-    #                               interp = interp)
-    #     # img = img[0:tr, :, :]
-
-    img = cv2.resize(img, (y0, x0), interpolation = interp)
-    print '\tFinal size: {}'.format(img.shape)
-    return img
 
 
 def partition_rows(m, h):
@@ -710,18 +652,40 @@ def partition_rows(m, h):
     return rows
 
 
+def add_padding(img, target):
+    print ''
+    print '[Output from : {}]'.format(PrintFrame())
+    print '\tImage: {}'.format(img.shape)
+    print '\tTarget: {}'.format(target)
+    y, x = target
+    h, w = img.shape[:2]
+
+    diffr, diffc = [y-h, x-w]
+    padc = np.zeros(shape = (h, diffc, 3))
+    padr = np.zeros(shape = (diffr, x, 3))
+
+    print '\tColumn pad: {}'.format(padc.shape)
+    print '\tRow pad: {}'.format(padr.shape)
+
+    img = np.hstack((img, padc))
+    img = np.vstack((img, padr))
+
+    print '\tFinal shape {}'.format(img.shape)
+
+    return img
+
+
 def build_region(region, m, source_dir, place_size, overlap, 
                  overlay_dir, max_w = 10000, exactly = None, pad = (0,0),
                  prepadding = (0,0)):
-    ''' 
-    TODO create exhaustive comments here detail everything. 
-    '''
     x,y,c,r = region
 
     print ''
     print '[Output from : {}]'.format(PrintFrame()) 
     print '\tRegion source: {}'.format(source_dir)
     print '\tx: {} y: {} c: {} r: {}'.format(x,y,c,r)
+    print '\tPlacing in tiles: {}'.format(place_size)
+    print '\tUsing level overlap = {}'.format(overlap)
 
     # Check if the output will be large
     if c*r*(place_size**2) > (2**31)/3:
@@ -737,23 +701,24 @@ def build_region(region, m, source_dir, place_size, overlap,
 
     built_img = [] # Not really an image; a list of row images
     for ix, row in enumerate(rows):
-        # print '\tRow {}/{}'.format(ix, len(rows))
         row_ = build_row(row, source_dir, place_size, overlap, overlay_dir)
         built_img.append(row_)
 
     img = assemble_rows(built_img)
 
+    print '\tImage shape: {}'.format(img.shape)
+    print '\tExact shape: {}'.format(exactly)
     if exactly is None:
         if img.shape[1] > max_w:
             print '[Output from : {}]'.format(PrintFrame())
             print '\tFound w > {}; resizing'.format(max_w) 
             img = downsize_keep_ratio(img, dim = 1, target_dim = max_w,
                                       interp = cv2.INTER_AREA)
-    elif any(img.shape[:2] != exactly):
+    elif not img.shape[:2] == exactly:
         print ''
         print '[Output from : {}]'.format(PrintFrame())
-        print '\tFound {} != {}; resizing'.format(img.shape[:2], exactly) 
-        img = downsize_add_padding(img, exactly, pad, prepadding)
+        print '\tFound img {} != target {}; padding'.format(img.shape[:2], exactly) 
+        img = add_padding(img, exactly)
 
     return img
 

@@ -91,11 +91,15 @@ def get_downsample_overlap(tilesize, writesize, overlap):
     return int(overlap / factor)
 
 
-def run_inference(do_clean = True, do_parsing = True, **kwargs):
+def run_inference(do_clean = True, do_parsing = True, do_assembly = True, **kwargs):
     if do_parsing:
         args = parse_options(**kwargs)
     else:
         args = kwargs
+
+    print ''
+    print '[Output from : {}]'.format(PrintFrame())
+    print_arg_set(**kwargs)
     exproot, expdirs = make_data_inference(args['filename'],
                                            args['writeto'],
                                            args['sub_dirs'],
@@ -116,17 +120,18 @@ def run_inference(do_clean = True, do_parsing = True, **kwargs):
                  args['GPU_ID'],
                  args['dev'])
 
-    downsample_overlap = get_downsample_overlap(args['tilesize'],
-                                                args['writesize'],
-                                                args['overlap'])
+    if do_assembly:
+        downsample_overlap = get_downsample_overlap(args['tilesize'],
+                                                    args['writesize'],
+                                                    args['overlap'])
 
-    assemble_tiles(exproot,
-                   expdirs,
-                   args['writesize'], 
-                   downsample_overlap, 
-                   args['overlay'],
-                   args['filename'],
-                   args['tilesize'])
+        assemble_tiles(exproot,
+                       expdirs,
+                       args['writesize'], 
+                       downsample_overlap, 
+                       args['overlay'],
+                       args['filename'],
+                       args['tilesize'])
 
     if do_clean:
         cleanup(created)
@@ -151,14 +156,25 @@ def pull_svs_stats(svs):
     nlevels = svs.level_count
     level_dims = svs.level_dimensions
 
-    # Omit print statement
-
     # Find 20X level:
     if app_mag == '20': # scanned @ 20X
         return 0, level_dims[0]
     if app_mag == '40': # scanned @ 40X
         return 1, level_dims[1]
 
+## It works with powers of 2, because the division is probably by 2, 4 or 16
+## For non powers of 2, it's OK if the size is small because the shift is
+## impreceptable
+## For other cases, it's I guess possible to afterwards, resize the image
+##  to make up for the lost fractional tiles. 
+## Like... you'll have an image wih 59 tiles in one direction, but since
+## the downsampled tiles give an under-sampling, because you can't take
+## fractional pixels.
+## The solution is to track the difference between the ideal reconstruction
+## and the practical one. 
+## Then at the end do a small resize to force the practical reconstruction
+## to be the expected ideal size, in order to properly attach the padding. 
+## The problem is pronounced when area >> tilesize
 def pad_m(m, tilesize, svsfile):
     # Infer how much of the original was cut given tilesie and dimensions:
     print ''
@@ -171,62 +187,38 @@ def pad_m(m, tilesize, svsfile):
     elif app_mag == '40':
         lvl20 = 1
 
+    print '\tSlide detected {}X'.format(app_mag)
+    print '\tm = {}'.format(m.shape)
+    # 
     tile_top = int(leveldims[0][0] * tilesize / leveldims[lvl20][0] / 
                    np.sqrt(downsample[lvl20])) # (EQ 1)
-    r,c = m.shape
+    factor = int(downsample[-1])
 
-    r0 = r*tile_top
-    c0 = c*tile_top
+    # ds_tilesize = leveldims[-1][0] / m.shape[1]
 
-    c_, r_ = leveldims[0] # Flipped from the OpenCV convention
-    # This reversal is the source of great confusion for me. 
+    print '\tFactor = {}'.format(factor)
+    ds_tilesize = tile_top / factor
 
-    print '\tTile top {}'.format(tile_top)
-    print '\tM is {}'.format(m.shape)
-    print '\tOriginal dims: {} , tiles cover: {}, downsample {}'.format(
-                                        (r_, c_), (r0, c0), downsample)
-    rpad = int((r_ - r0) / np.sqrt(downsample[-1]))
-    cpad = int((c_ - c0) / np.sqrt(downsample[-1]))
+    # ncol, nrow = [int(leveldims[-1][0] / ds_tilesize),
+    #               int(leveldims[-1][1] / ds_tilesize)]
+    # padc, padr = [leveldims[-1][0] % ds_tilesize,
+    #               leveldims[-1][1] % ds_tilesize]
 
-    print '\tPadding w.r.t. last level is rows {}, cols {}'.format(rpad, cpad) 
-    return rpad, cpad 
+    padc = leveldims[-1][0] - (m.shape[1] * int(ds_tilesize))
+    padr = leveldims[-1][1] - (m.shape[0] * int(ds_tilesize))
+
+    print '\tTile top: {} '.format(tile_top)
+    print '\tLow level dimensions rows: {} cols: {}'.format(leveldims[-1][1], 
+                                                            leveldims[-1][0])
+    print '\tds_tilesize = {}'.format(ds_tilesize)
+    print '\tpadr = {} padc = {}'.format(padr, padc)
+
+    return padr, padc, int(ds_tilesize)
 
 
-def pre_pad(tilesize, overlap, svsfile):
-    '''
-    The thing is, when i start by skipping the first tile
-    then there is a padding that has to go in the top-left corner of the image
-
-    With this padding in the place, the bottom-right padding is altered.
-    It also affects the diagonal shift, and the resizing effects. 
-
-    I think this is it. 
-
-    Start by re-using the code to infer the tile starting places.. 
-    '''
-    lvl20x, dim20x = pull_svs_stats(svsfile)
-    resize_factor = int(svsfile.level_downsamples[lvl20x]) # 1 if the slide is 20x
-    
-    # tilesize and overlap given w.r.t. 20X
-    dims_top = svsfile.level_dimensions[0]
-    tile_top = int(dims_top[0] * tilesize / dim20x[0] / np.sqrt(resize_factor)) # (EQ 1)
-    overlap_top = int(overlap * np.sqrt(resize_factor))
-
-    nrow = dims_top[1] / tile_top
-    ncol = dims_top[0] / tile_top
-
-    pre_pad = tile_top - overlap_top
-
-    print '\tPad top-left equal to row {} col {}'.format(pre_pad, pre_pad)
-
-    return int(pre_pad / np.sqrt(svsfile.level_downsamples[0]))
 
 # so ugly
 def assemble_full_slide(scales = [756, 512, 256], **kwargs):
-    # With N number of scales, average the probability images from each:
-    # The catch:
-    # We have to work on the whole slide at once, it's the only way to be
-    # reasonably sure to align all the scales
 
     # Still there will be a little bit of disconcordance. Just a bit.
     print ''
@@ -249,6 +241,9 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
     for k,s in enumerate(scales):
         ds_overlap = get_downsample_overlap(s, kwargs['writesize'], kwargs['overlap'])
         print ''
+        print ' ######################################################################## '
+        print ' ######################################################################## '
+        print ''
         print '[Output from : {}]'.format(PrintFrame())
         print '\tGathering scale {} ({} of {})'.format(s, k+1, len(scales))
         print '\tDownscale overlap: {}'.format(ds_overlap)
@@ -259,19 +254,52 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
 
         # Get the tilemap
         tilemap = 'data_tilemap_{}.npy'.format(s)
-        print '\tUsing tilemap {}'.format(tilemap)
         m = np.load(os.path.join(exproot, tilemap))
         r,c = m.shape
+        print '\tUsing tilemap {}'.format(tilemap)
+        print '\tm = {}'.format(m.shape)
+
+        projected_area = [r*kwargs['writesize'], c*kwargs['writesize']]
+        projected_ratio = projected_area[0] / float(projected_area[1])
+        low_padr, low_padc, writesize = pad_m(m, s, svsfile)
+
+        low_level_dimensions = svsfile.level_dimensions[-1]
+        low_level_dimensions = low_level_dimensions[::-1]
+        low_level_ratio = low_level_dimensions[0] / float(low_level_dimensions[1])
+        ylow, xlow = low_level_dimensions
+        adjusted_low_level_dims = [ylow - low_padr,
+                                   xlow - low_padc]
+        adjusted_low_level_ratio = adjusted_low_level_dims[0] / float(adjusted_low_level_dims[1])
+        downsample_factor = projected_area[0]/float(adjusted_low_level_dims[0])
+        # downsample_place_size = int(kwargs['writesize'] / downsample_factor)
+
+        print ''
+        print '[Output from : {}]'.format(PrintFrame())
+        print '\tScale: {}'.format(s)
+        print '\tProjected area = {} ratio: {}'.format(projected_area, 
+                                                       projected_ratio)
+        print '\tLow level padr: {} padc: {}'.format(low_padr, low_padc)
+        print '\tLow level dims = {} ratio: {}'.format(low_level_dimensions, 
+                                                       low_level_ratio)
+        print '\tAdjusted low lvl = {} ratio: {}'.format(adjusted_low_level_dims,
+                                                         adjusted_low_level_ratio)
+        print '\tDownsample factor = {}'.format(downsample_factor)
+        print '\tWritesize = {}'.format(writesize)
+
+        new_projected_area = [r*writesize, c*writesize]
+        new_projected_ratio = new_projected_area[0] / float(new_projected_area[1])
+        print '\tNew projected area = {} ratio: {}'.format(new_projected_area, 
+                                                           new_projected_ratio)
+        print '\tProjected padding to add:'
+        print '\t\trows: {} cols: {}'.format(low_level_dimensions[0] - new_projected_area[0],
+                                             low_level_dimensions[1] - new_projected_area[1])
 
         # Construct scaled images
         # No overlay
-        pad_topleft = pre_pad(s, kwargs['overlap'], svsfile)
+        # pad_topleft = pre_pad(s, kwargs['overlap'], svsfile)
         scaleimages[k] = [data.build_region(region = [0,0,c,r], m = m, source_dir = pd,
-                            place_size = kwargs['writesize'], overlap = ds_overlap,
-                            overlay_dir = '', exactly = level_dims, 
-                            pad = pad_m(m, s, svsfile),
-                            prepadding = pad_topleft) for pd in probdirs]
-
+                            place_size = writesize, overlap = ds_overlap,
+                            overlay_dir = '', exactly = low_level_dimensions) for pd in probdirs]
 
     print ''
     print '[Output from : {}]'.format(PrintFrame())
@@ -307,6 +335,11 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
         classim = np.mean(classim, axis = 2)
         classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
 
+        ### TODO here add in some weighting
+        ### Probably pass in a vector of weights or something. 
+
+
+
         mean_images[k] = 'class_{}_comboimg.jpg'.format(k)
         mean_images[k] = os.path.join(exproot, mean_images[k])
         print '\twriting to {}'.format(mean_images[k])
@@ -335,12 +368,16 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
     print ''
     print '[Output from : {}]'.format(PrintFrame())
     print '\tcoloring from original rgb: '
-    # width and height somehow reverse here. 
     avgscale = int(np.mean(scales))
+    # Should be same size & scale as combo image
     rgb = svsfile.read_region(location = (0,0),
                               level = len(svsfile.level_dimensions)-1, 
                               size = svsfile.level_dimensions[-1])
     rgb = np.array(rgb)[:,:,:3]
+    rgb = rgb[:,:,(2,1,0)]
+    print '\tLoaded RGB from level {} sized {}'.format(
+           len(svsfile.level_dimensions)- 1,
+           svsfile.level_dimensions[-1][::-1])
     rgb = data.overlay_colors(rgb, comboclass)
     comboname = os.path.join(exproot, 'multiscale_colored.jpg')
     print '\tsaving to {}'.format(comboname) 
@@ -348,29 +385,37 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
 
     print ''
     print '[Output from : {}]'.format(PrintFrame())
+        print ' ######################################################################## '
+        print ' ######################################################################## '
     print '\tMade it'
 
 
 
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
-    scales = [356]
+    scales = [2048, 1024, 512, 256]
 
-    # for s in scales:
-    #     # Re-parse, I guess
-    #     print ''
-    #     print '[Output from : {}]'.format(PrintFrame())  
-    #     print '\tWorking in scale: {}'.format(s)
-    #     args = parse_options(**kwargs)
-    #     # Remove some things
-    #     args['tilesize'] = s # Override tilesize 
-    #     args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
-    #                         for subdir in args['sub_dirs']]
-    #     args['remove_first'] = True
-    #     print_arg_set(**args)
-    #     run_inference(do_clean = False, do_parsing = False, **args)
+    for s in scales:
+        # Re-parse, I guess
+        print ''
+        print '[Output from : {}]'.format(PrintFrame())  
 
-    assemble_full_slide(scales = scales, **kwargs)
+        args = parse_options(**kwargs)
+        # Remove some things
+        args['tilesize'] = s # Override tilesize 
+        args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
+                            for subdir in args['sub_dirs']]
+        # args['remove_first'] = True
+        print_arg_set(**args)
+        run_inference(do_clean = False, do_parsing = False, 
+                      do_assembly = False, **args)
+
+    if not kwargs['tileonly']:
+        print ''
+        print '[Output from : {}]'.format(PrintFrame())
+        print '\tEntering assembly procedure for {}'.format(kwargs['filename'])
+        print_arg_set(**kwargs)
+        assemble_full_slide(scales = scales, **kwargs)
 
 
 
@@ -382,45 +427,9 @@ def run_multiscale(**kwargs):
 ##################################################################
 ##################################################################
 
-
-def dev_mode():
-    filename = '/home/nathan/data/pca_wsi/MaZ-001-a.svs'
-    writeto = '/home/nathan/histo-seg/pca'
-
-    # filename = '/Users/nathaning/Dropbox/SVS/PCA/MaZ-001-a.svs'
-    # writeto = '/Users/nathaning/_projects/histo-seg/pca'
-
-    tilesize = 512
-    writesize = 256 # this remains the dim expected by the network
-    overlap = 64
-    remove = True
-
-    weights = '/home/nathan/semantic-pca/weights/seg_0.5/norm_iter_125000.caffemodel'
-    model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
-    caffe_mode = 0
-    GPU_ID = 0
-    dev = True
-
-    # sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
-    sub_dirs = ['tiles', 'result', 'prob0', 'prob1']
-
-    run_multiscale(filename = filename,
-                   writeto = writeto,
-                   sub_dirs = sub_dirs,
-                   tilesize = tilesize,
-                   writesize = writesize,
-                   weights = weights,
-                   model_template = model_template,
-                   remove_first = remove,
-                   overlap = overlap,
-                   dev = dev,
-                   nclass = 2,
-                   whiteidx = 0)
-
-
-
 def run_mode():
-    filename = '/home/nathan/data/pca_wsi/MaZ-001-a.svs'
+    filename = '/home/nathan/data/pca_wsi/swartwoods.svs'
+    # filename = '/home/nathan/data/pca_wsi/MaZ-001-a.svs'
     writeto = '/home/nathan/histo-seg/pca'
     tilesize = 512
     writesize = 256 # this remains the dim expected by the network
@@ -487,5 +496,4 @@ def parse_options(**kwargs):
 
 
 if __name__ == '__main__':
-    # dev_mode()
     run_mode()

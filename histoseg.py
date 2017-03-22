@@ -127,14 +127,10 @@ def get_output(d, pred, out, colors):
     # TODO Add support for BATCHSIZE > 1
 
     if "result" in d:
-        ## Main result ~ label matrix
-        #print " doing result task"
         labels = np.argmax(out, axis = 0)
         x = impose_colors(labels, colors)
     
     elif "prob" in d:
-        #print "Working in {}\tTODO add a regex to pull correct layer".format(d)
-        #layer = int(d[-1]) # TODO THIS IS SKEETTCCHHHYY -- now its broken
         layer = int(d[4]) # This will work as long as"
                           # 1. "prob" is in front &&
                           # 2. there are only single digit number of classes.         
@@ -164,11 +160,11 @@ def process(exphome, expdirs, model_template, weights, mode = 1, GPU_ID = 0):
     imgs = list_imgs(path = expdirs[0])
 
     # TODO PULL NUMBER  COLORS FROM NET DEF   
-    colors = generate_color.generate(n = 5, whiteidx = 3)
+    colors = generate_color.generate(n = 5, whiteidx = 3, cmap = 'jet')
 
     for i, img in enumerate(imgs):
         if i % 100 == 0:
-            print 'Histoseg processing img {} / {}'.format(i, len(imgs))
+            print '\tHistoseg processing img {} / {}'.format(i, len(imgs))
 
         _ = net.forward() 
         pred = net.blobs['prob'].data

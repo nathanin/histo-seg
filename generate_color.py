@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 
 
-def generate(n, whiteidx = None, cmap = 'Set1'):
+def generate(n, whiteidx = None, cmap = 'jet'):
     '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct 
     RGB color.'''
     color_norm  = colors.Normalize(vmin=0, vmax=n-1)
@@ -36,5 +36,5 @@ def generate(n, whiteidx = None, cmap = 'Set1'):
     colors_ = cv2.convertScaleAbs(retval * 255)
     if whiteidx is not None:
         colors_[whiteidx, :] = [255, 255, 255]
-    print colors_
+    # print colors_
     return colors_
