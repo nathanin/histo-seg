@@ -83,7 +83,7 @@ if __name__ == "__main__":
    # src = "/Users/nathaning/databases/pca/seg_0.3/feat"
    # anno = "/Users/nathaning/databases/pca/seg_0.3/anno_png"
 
-   root = '/home/nathan/semantic-pca/data/seg_0.5'
+   root = '/home/nathan/semantic-pca/data/seg_0.6/val'
    src = os.path.join(root, 'jpg')
    anno = os.path.join(root, 'mask')
 

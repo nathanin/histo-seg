@@ -169,13 +169,10 @@ def split_img(t, ext, mode = '3ch', writesize = 256,tiles = 4):
 def random_crop(h, w, edge):
     minx = 0
     miny = 0
-
     maxx = w-edge
     maxy = h-edge
-
     x = np.random.randint(minx, maxx)
     y = np.random.randint(miny, maxy)
-
     x2 = x+edge
     y2 = y+edge
 
@@ -191,33 +188,26 @@ def sub_img(img_list, ext, mode = '3ch', edge = 512, writesize = 256, n = 8, coo
 
     # Keep track of the randomly generated coordinates
     if coords == 0:
-        # print 'Generating random coordinates'
         gencoord = True
         coords = [0]*len(img_list)
     else:
-        # print 'Using imported coordinates'
         gencoord = False
-    # print len(coords)
 
     for index, (name, c) in enumerate(zip(img_list, coords)):
         img = cv2.imread(name)
-        # os.remove(name) # SUPER SKETCHYYYYY
         name = name.replace('.'+ext, '_{}.{}'.format(edge,ext))
 
         # print coord
         if gencoord:
-            # Has to hold values up to max(h,w)
             coordsout = np.zeros(shape = (n, 4), dtype = np.uint32)
  
         for i in range(n):
             if gencoord:
                 x, x2, y, y2 = random_crop(h,w, edge = edge)
                 coordsout[i,:] = [x, x2, y, y2]
-                # print 'Coordstout: ',coordsout[i,:], ' ', 
             else:
                 x,x2,y,y2 = c[i,:]
 
-            # print '{} : {} \t {} : {}'.format(x,x2,y,y2)
             name = name.replace('.'+ext, 's.'+ext)
 
             if mode == '3ch':
@@ -233,9 +223,6 @@ def sub_img(img_list, ext, mode = '3ch', edge = 512, writesize = 256, n = 8, coo
 
             if gencoord:
                 coords[index] = coordsout
-
-
-    # print 'Done partitioning images in {}'.format(path)
 
     return coords
 
@@ -298,17 +285,15 @@ def multiply_data(src, anno):
     else:
         print 'non-1 response. exiting TODO: Make this nicer'
         return 0
-    # That was important because the following functions write out to the original dirs.
-    # I.E. they change the contents.. which is usually a no no. but this time is how it goes.
     
     srclist = sorted(glob.glob(os.path.join(src, '*.jpg')))
     annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
 
     # Multi-scale
-    for scale, numbersub in zip([756, 512, 256], [4, 12, 9]):
+    for scale, numbersub in zip([1024, 756, 512, 256], [4, 4, 15, 9]):
+        print 'Extracting {} subregions of size {}'.format(numbersub, scale)
         coords = sub_img(srclist, ext = 'jpg', mode = '3ch', 
                          edge = scale, n = numbersub); 
-        
         _ = sub_img(annolist, ext = 'png', mode = '1ch', 
                     edge = scale, coords = coords, n = numbersub);
 
