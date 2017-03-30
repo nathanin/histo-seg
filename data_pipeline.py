@@ -1,5 +1,21 @@
 #!/usr/bin/python
 
+
+'''
+This script is for creating datasets from labelled image-annotation pairs
+
+The assumption is the labels and annotations are named the same, with 
+annotations in PNG and labels in JPG images, located in respective folders
+
+Several data augmentation strategies are applied.
+
+The working functions are in the file `data.py`
+
+'''
+
+
+
+
 import data
 import glob
 import os

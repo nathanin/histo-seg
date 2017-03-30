@@ -4,14 +4,14 @@ One-stop solution to data pruning, preprocessing, and conversion in format usabl
 Two modes: training and inference
 
 Training takes two dirs, with images, similarly labeled.
-	The source images are multiplied and written out to _prepared folders
+    The source images are multiplied and written out to _prepared folders
 
 Inference takes an whole slide file
-	A new dir is created underneath a <project_dir> with the name of the file.
-	The image is pre-processed at low-mag for tissue area
-	tissue area is tiled (with/without overlapping) and added to a `tiles` dir
-	A list.txt is written to <project_dir>/<image_name>/list.txt
-	A map.png and map.npy are written to <project_dir>/<image_name>
+    A new dir is created underneath a <project_dir> with the name of the file.
+    The image is pre-processed at low-mag for tissue area
+    tissue area is tiled (with/without overlapping) and added to a `tiles` dir
+    A list.txt is written to <project_dir>/<image_name>/list.txt
+    A map.png and map.npy are written to <project_dir>/<image_name>
 
 '''
 

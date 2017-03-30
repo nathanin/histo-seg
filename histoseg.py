@@ -13,7 +13,7 @@ import numpy as np
 import generate_color
 
 CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
-sys.path.insert(0, CAFFE_ROOT+"/python") 
+sys.path.insert(0, CAFFE_ROOT + "/python")
 import caffe
 
 # Define inspection code that spits out the line it's called from (as str)
@@ -42,14 +42,14 @@ def init_net(model, weights, mode, GPU_ID):
 def define_colors(n = 4):
     # TODO !!!! INSERT A COLOR-WHEELY TYPE ALGORITHM:
     # Define a set of colors for visualization later
-    ## screw it, for now:
+    # screw it, for now:
 
     # TODO migrate this to pipeline.py ; pass the color matrix through
-    c0 = [245, 32, 35] # red - g3
-    c1 = [25, 242, 20] # green - g4
-    c2 = [35, 35, 220] # blue - BN
-    c3 = [255, 255, 255] # white - ST
-    c4 = [210, 150, 20] # white - ST
+    c0 = [245, 32, 35]  # red - g3
+    c1 = [25, 242, 20]  # green - g4
+    c2 = [35, 35, 220]  # blue - BN
+    c3 = [255, 255, 255]  # white - ST
+    c4 = [210, 150, 20]  # white - ST
 
     label_colors = np.array([c0, c1, c2, c3, c4])
 

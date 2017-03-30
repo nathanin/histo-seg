@@ -80,8 +80,9 @@ def assemble_tiles(result_root, expdirs, writesize, overlap, overlay,
 
 def cleanup(dirs):
     for d in dirs:
-        print 'Cleaning {}'.format(d)
-        shutil.rmtree(d)
+        if d != '/':
+            print 'Cleaning {}'.format(d)
+            shutil.rmtree(d)
 
 
 def get_downsample_overlap(tilesize, writesize, overlap):
@@ -134,7 +135,7 @@ def run_inference(do_clean = True, do_parsing = True, do_assembly = True, **kwar
                        args['tilesize'])
 
     if do_clean:
-        cleanup(created)
+        cleanup(expdirs)
 
 
 def print_arg_set(**kwargs):
@@ -187,7 +188,16 @@ def pad_m(m, tilesize, svsfile):
     elif app_mag == '40':
         lvl20 = 1
 
+    ### Sketchy fix
+    if int(downsample[-1]) == 64:
+        low = len(downsample)-2
+    else:
+        low = len(downsample)-1
+
     print '\tSlide detected {}X'.format(app_mag)
+    print '\tSlide levels: {}'.format(len(downsample))
+    print '\tDownsample rate top to bottom: {}'.format(downsample[-1])
+    print '\tUsing level as bottom: {}'.format(low)
     print '\tm = {}'.format(m.shape)
     # 
     tile_top = int(leveldims[0][0] * tilesize / leveldims[lvl20][0] / 
@@ -204,12 +214,12 @@ def pad_m(m, tilesize, svsfile):
     # padc, padr = [leveldims[-1][0] % ds_tilesize,
     #               leveldims[-1][1] % ds_tilesize]
 
-    padc = leveldims[-1][0] - (m.shape[1] * int(ds_tilesize))
-    padr = leveldims[-1][1] - (m.shape[0] * int(ds_tilesize))
+    padc = leveldims[low][0] - (m.shape[1] * int(ds_tilesize))
+    padr = leveldims[low][1] - (m.shape[0] * int(ds_tilesize))
 
     print '\tTile top: {} '.format(tile_top)
-    print '\tLow level dimensions rows: {} cols: {}'.format(leveldims[-1][1], 
-                                                            leveldims[-1][0])
+    print '\tLow level dimensions rows: {} cols: {}'.format(leveldims[low][1], 
+                                                            leveldims[low][0])
     print '\tds_tilesize = {}'.format(ds_tilesize)
     print '\tpadr = {} padc = {}'.format(padr, padc)
 
@@ -263,7 +273,12 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
         projected_ratio = projected_area[0] / float(projected_area[1])
         low_padr, low_padc, writesize = pad_m(m, s, svsfile)
 
-        low_level_dimensions = svsfile.level_dimensions[-1]
+        if int(svsfile.level_downsamples[-1]) == 64:
+            low = len(svsfile.level_downsamples)-2
+        else:
+            low = len(svsfile.level_downsamples)-1
+
+        low_level_dimensions = svsfile.level_dimensions[low]
         low_level_dimensions = low_level_dimensions[::-1]
         low_level_ratio = low_level_dimensions[0] / float(low_level_dimensions[1])
         ylow, xlow = low_level_dimensions
@@ -279,6 +294,7 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
         print '\tProjected area = {} ratio: {}'.format(projected_area, 
                                                        projected_ratio)
         print '\tLow level padr: {} padc: {}'.format(low_padr, low_padc)
+        print '\tUsing level {} as the low resolution'.format(low)
         print '\tLow level dims = {} ratio: {}'.format(low_level_dimensions, 
                                                        low_level_ratio)
         print '\tAdjusted low lvl = {} ratio: {}'.format(adjusted_low_level_dims,
@@ -337,9 +353,6 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
 
         ### TODO here add in some weighting
         ### Probably pass in a vector of weights or something. 
-
-
-
         mean_images[k] = 'class_{}_comboimg.jpg'.format(k)
         mean_images[k] = os.path.join(exproot, mean_images[k])
         print '\twriting to {}'.format(mean_images[k])
@@ -361,7 +374,7 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
     colors = generate_color.generate(n = nclass, whiteidx = kwargs['whiteidx'], 
                                      cmap = 'brg')
     comboclass = histoseg.impose_colors(comboclass, colors)
-    comboname = os.path.join(exproot, 'multiscale_class.jpg')
+    comboname = os.path.join(exproot, 'multiscale_class.png')
     print '\tsaving to {}'.format(comboname) 
     cv2.imwrite(comboname, comboclass)
 
@@ -371,8 +384,8 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
     avgscale = int(np.mean(scales))
     # Should be same size & scale as combo image
     rgb = svsfile.read_region(location = (0,0),
-                              level = len(svsfile.level_dimensions)-1, 
-                              size = svsfile.level_dimensions[-1])
+                              level = low, 
+                              size = svsfile.level_dimensions[low])
     rgb = np.array(rgb)[:,:,:3]
     rgb = rgb[:,:,(2,1,0)]
     print '\tLoaded RGB from level {} sized {}'.format(
@@ -387,28 +400,32 @@ def assemble_full_slide(scales = [756, 512, 256], **kwargs):
     print '[Output from : {}]'.format(PrintFrame())
     print ' ######################################################################## '
     print ' ######################################################################## '
-    print '\tMade it'
+    print '\tFinished !!!!'
 
 
+def cleanup_all(exproot):
+    dlist = os.listdir(exproot)
+    dlist = [os.path.join(exproot, d) for d in dlist]
+    _ = [shutil.rmtree(d) for d in dlist if os.path.isdir(d)]
 
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
     scales = [1024, 512, 256]
 
-    # for s in scales:
-    #     # Re-parse, I guess
-    #     print ''
-    #     print '[Output from : {}]'.format(PrintFrame())  
+    for s in scales:
+        # Re-parse, I guess
+        print ''
+        print '[Output from : {}]'.format(PrintFrame())  
 
-    #     args = parse_options(**kwargs)
-    #     # Remove some things
-    #     args['tilesize'] = s # Override tilesize 
-    #     args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
-    #                         for subdir in args['sub_dirs']]
-    #     # args['remove_first'] = True
-    #     print_arg_set(**args)
-    #     run_inference(do_clean = False, do_parsing = False, 
-    #                   do_assembly = False, **args)
+        args = parse_options(**kwargs)
+        # Remove some things
+        args['tilesize'] = s # Override tilesize 
+        args['sub_dirs'] = ['{}_{}'.format(subdir, args['tilesize']) 
+                            for subdir in args['sub_dirs']]
+        # args['remove_first'] = True
+        print_arg_set(**args)
+        run_inference(do_clean = False, do_parsing = False, 
+                      do_assembly = False, **args)
 
     if not kwargs['tileonly']:
         print ''
@@ -417,7 +434,11 @@ def run_multiscale(**kwargs):
         print_arg_set(**kwargs)
         assemble_full_slide(scales = scales, **kwargs)
 
-
+        tail = os.path.basename(kwargs['filename'])
+        slide_name, ext = os.path.splitext(tail) 
+        exproot = os.path.join(kwargs['writeto'], slide_name)
+        print 'Cleaning up in {}'.format(exproot)
+        cleanup_all(exproot)
 
 ##################################################################
 ##################################################################
@@ -427,7 +448,7 @@ def run_multiscale(**kwargs):
 ##################################################################
 ##################################################################
 
-def run_mode():
+def run_devel():
     filename = '/home/nathan/data/pca_wsi/swartwoods.svs'
     # filename = '/home/nathan/data/pca_wsi/MaZ-001-a.svs'
     writeto = '/home/nathan/histo-seg/pca'
@@ -496,4 +517,4 @@ def parse_options(**kwargs):
 
 
 if __name__ == '__main__':
-    run_mode()
+    run_devel()
