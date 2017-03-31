@@ -6,7 +6,6 @@ set -e
 
 doPush=false
 
-
 while [[ $# -gt 1 ]]
 do
     key="$1"
@@ -23,7 +22,6 @@ do
 esac
 shift # past argument
 done
-
 
 git commit -a
 
