@@ -87,7 +87,7 @@ def coloration(img, l_mean, l_std):
 
 def data_coloration(t, mode, ext):
     # TODO replace with random  numbers generated from uniform distrib. 
-    l_mean_range = (144.048, 130.22, 145.0, 135.5)
+    l_mean_range = (144.048, 130.22, 145.0, 135.5, 140.0)
     l_std_range = (40.23, 35.00, 35.00, 37.5)
 
     img_list = sorted(glob.glob(os.path.join(t, '*.'+ext)))
@@ -119,51 +119,51 @@ def writeList(src, anno):
 
 
 
-def split_img(t, ext, mode = '3ch', writesize = 256,tiles = 4):
-    # Split into `tiles` number of sub-regions
-    # It help if tiles is a square number.
-    # Pull one image, get the dimensions:
-    
-    img_list = glob.glob(os.path.join(t, '*.'+ext))
-    example = cv2.imread(img_list[0])
-    h,w = example.shape[0:2]
-   
-    # TODO make this general, FFS!!!
-    # added + 1 to make odd-numbered cuts
-    # i.e it will have a true center. 
-    grid = np.array([[0, 0, (w/2)+1, (h/2)+1],
-                    [0, h/2, (w/2)+1, h],
-                    [w/2, 0, w, (h/2)+1],
-                    [w/2, h/2, w, h]])
-
-    # remove the original image
-    # name-out: tile1 --> tile1s, tile1ss, tile1sss, tile1ssss
-    for name in img_list:
-        if mode == '3ch':
-            img = cv2.imread(name)
-        elif mode == '1ch':
-            #img = cv2.imread(name, 0)
-            img = cv2.imread(name)
-            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
-
-        os.remove(name)
-        for i in range(tiles):
-            r = grid[i, :]
-            name = name.replace('.'+ext, 's.'+ext)
-
-            if mode == '3ch':
-                subimg = img[r[0]:r[2], r[1]:r[3], :]
-                subimg = cv2.resize(subimg, dsize = (writesize, writesize),
-                                    interpolation = cv2.INTER_NEAREST)
-            elif mode == '1ch':
-                subimg = img[r[0]:r[2], r[1]:r[3]]
-                subimg = cv2.resize(subimg, dsize = (writesize, writesize), 
-                                    interpolation = cv2.INTER_NEAREST)
-
-            #subimg = cv2.resize(subimg, dsize = (writesize, writesize))
-            cv2.imwrite(filename = name, img = subimg)
-
-    print '\tDone partitioning images in {}'.format(t)                    
+#def split_img(t, ext, mode = '3ch', writesize = 256,tiles = 4):
+#    # Split into `tiles` number of sub-regions
+#    # It help if tiles is a square number.
+#    # Pull one image, get the dimensions:
+#    
+#    img_list = glob.glob(os.path.join(t, '*.'+ext))
+#    example = cv2.imread(img_list[0])
+#    h,w = example.shape[0:2]
+#   
+#    # TODO make this general, FFS!!!
+#    # added + 1 to make odd-numbered cuts
+#    # i.e it will have a true center. 
+#    grid = np.array([[0, 0, (w/2)+1, (h/2)+1],
+#                    [0, h/2, (w/2)+1, h],
+#                    [w/2, 0, w, (h/2)+1],
+#                    [w/2, h/2, w, h]])
+#
+#    # remove the original image
+#    # name-out: tile1 --> tile1s, tile1ss, tile1sss, tile1ssss
+#    for name in img_list:
+#        if mode == '3ch':
+#            img = cv2.imread(name)
+#        elif mode == '1ch':
+#            #img = cv2.imread(name, 0)
+#            img = cv2.imread(name)
+#            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
+#
+#        os.remove(name)
+#        for i in range(tiles):
+#            r = grid[i, :]
+#            name = name.replace('.'+ext, 's.'+ext)
+#
+#            if mode == '3ch':
+#                subimg = img[r[0]:r[2], r[1]:r[3], :]
+#                subimg = cv2.resize(subimg, dsize = (writesize, writesize),
+#                                    interpolation = cv2.INTER_NEAREST)
+#            elif mode == '1ch':
+#                subimg = img[r[0]:r[2], r[1]:r[3]]
+#                subimg = cv2.resize(subimg, dsize = (writesize, writesize), 
+#                                    interpolation = cv2.INTER_NEAREST)
+#
+#            #subimg = cv2.resize(subimg, dsize = (writesize, writesize))
+#            cv2.imwrite(filename = name, img = subimg)
+#
+#    print '\tDone partitioning images in {}'.format(t)                    
              
 
 def random_crop(h, w, edge):
@@ -275,8 +275,8 @@ def multiply_data(src, anno):
     - similary named source images are contained in their own dir
     - we want them to be multiplied
 
-    The goal is to not write a brand new script every time.
     '''
+
     print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(src, anno) 
     choice = input('I have made copies. (1/no) ')
 
@@ -290,14 +290,14 @@ def multiply_data(src, anno):
     annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
 
     # Multi-scale
-    for scale, numbersub in zip([1024, 756, 512, 256], [4, 4, 15, 9]):
+    for scale, numbersub in zip([1024, 512], [9, 9]):
         print 'Extracting {} subregions of size {}'.format(numbersub, scale)
         coords = sub_img(srclist, ext = 'jpg', mode = '3ch', 
                          edge = scale, n = numbersub); 
         _ = sub_img(annolist, ext = 'png', mode = '1ch', 
                     edge = scale, coords = coords, n = numbersub);
 
-    # Now it's oK to remove the originals
+    # Now it's OK to remove the originals
     delete_list(srclist)
     delete_list(annolist)
 

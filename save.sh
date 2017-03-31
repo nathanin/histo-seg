@@ -1,6 +1,31 @@
 #!/bin/bash
 
+# Parse arguments
+
 set -e
+
+doPush=false
+
+
+while [[ $# -gt 1 ]]
+do
+    key="$1"
+
+    case $key in
+        -p|--push)  # Push or not. Default not push
+        doPush=true
+        shift
+        ;; # Done with one case
+    *)
+        # Unknown option
+        ;;
+esac
+shift # past argument
+done
+
+
 git commit -a
 
-git push origin master
+if [ "$doPush"=true ]; then
+    git push origin master
+fi

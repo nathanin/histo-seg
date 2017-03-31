@@ -1,7 +1,6 @@
 ## Histo-Seg
-First pass at conceptually refactoring semantic segmentation in whole slide histopathology images.
+Histopathology images are Gigapixel-sized RGB channel images, often existing as stacked image pyramids.
 
-Histopathology images are Gigabyte-sized RGB channel images, often existing as stacked image pyramids.
 
 Examples: 
 
@@ -16,4 +15,4 @@ Data is presumed to exist grouped by eventual class, for classificaiton, or in f
 
 
 
-Direct questions & comments to ing[dot]nathany[at]gmail[dot]com
+Questions & comments to ing[dot]nathany[at]gmail[dot]com
