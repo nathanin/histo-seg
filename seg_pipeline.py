@@ -408,9 +408,45 @@ def cleanup_all(exproot):
     dlist = [os.path.join(exproot, d) for d in dlist]
     _ = [shutil.rmtree(d) for d in dlist if os.path.isdir(d)]
 
+
+
+def run_offsets(**kwargs):
+    # offsets should really be some fraction of tilesize
+    offsets = [0, 128]
+
+    # Classification loop
+    for offset in offsets:
+        # Re-parse, I guess
+        print ''
+        print '[Output from : {}]'.format(PrintFrame())  
+
+        args = parse_options(**kwargs)
+        # Change some things
+        args['offset'] = offset
+        args['sub_dirs'] = ['{}_{}'.format(subdir, args['offset']) 
+                            for subdir in args['sub_dirs']]
+        print_arg_set(**args)
+        run_inference(do_clean = False, do_parsing = False, 
+                      do_assembly = False, **args)
+
+    # Assembly function
+    if not kwargs['tileonly']:
+        print ''
+        print '[Output from : {}]'.format(PrintFrame())
+        print '\tEntering assembly procedure for {}'.format(kwargs['filename'])
+        print_arg_set(**kwargs)
+        assemble_full_slide(scales = scales, **kwargs)
+
+        tail = os.path.basename(kwargs['filename'])
+        slide_name, ext = os.path.splitext(tail) 
+        exproot = os.path.join(kwargs['writeto'], slide_name)
+        print 'Cleaning up in {}'.format(exproot)
+        cleanup_all(exproot)
+
+
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
-    scales = [1024, 512, 256]
+    scales = [1024, 512]
 
     for s in scales:
         # Re-parse, I guess
@@ -518,3 +554,20 @@ def parse_options(**kwargs):
 
 if __name__ == '__main__':
     run_devel()
+
+
+
+'''
+
+// Notes
+
+- Development direction:
+    multi-scale classification - 
+    use a network up-front to focus on cancer/non cancer areas from low resolution
+    We want a very sensitive filter, not to miss any of the cancer in other words.
+
+- Scale 0 classification: define the rough tumor area
+- Scale 1 segmentation: fine-grained segmentation and grading
+
+'''
+
