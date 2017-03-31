@@ -14,6 +14,7 @@ do
     case $key in
         -p|--push)  # Push or not. Default not push
         doPush=true
+        echo "Setting push true"
         shift
         ;; # Done with one case
     *)
