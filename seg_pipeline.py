@@ -213,8 +213,8 @@ def pad_m(m, tilesize, svsfile):
     padc = leveldims[low][0] - ideal_c
     padr = leveldims[low][1] - ideal_r
 
-    d_x = ideal_c - real_c
-    d_y = ideal_r - real_r
+    d_x = ideal_c / float(real_c)
+    d_y = ideal_r / float(real_r)
 
 
     return padr, padc, ds_tilesize, d_x, d_y
