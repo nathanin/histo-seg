@@ -157,20 +157,23 @@ def pull_svs_stats(svs):
     if app_mag == '40':  # scanned @ 40X
         return 1, level_dims[1]
 
+'''
+It works with powers of 2, because the division is probably by 2, 4 or 16
+For non powers of 2, it's OK if the size is small because the shift is
+small
+For other cases, it's I guess possible to afterwards, resize the image
+to make up for the lost fractional tiles.
+Like... you'll have an image wih 59 tiles in one direction, but since
+the downsampled tiles give an under-sampling, because you can't take
+fractional pixels.
+The solution is to track the difference between the ideal reconstruction
+and the practical one.
+Then at the end do a small resize to force the practical reconstruction
+to be the expected ideal size, in order to properly attach the padding.
+The problem is pronounced when area >> tilesize
+'''
 
-## It works with powers of 2, because the division is probably by 2, 4 or 16
-## For non powers of 2, it's OK if the size is small because the shift is
-## small
-## For other cases, it's I guess possible to afterwards, resize the image
-##  to make up for the lost fractional tiles.
-## Like... you'll have an image wih 59 tiles in one direction, but since
-## the downsampled tiles give an under-sampling, because you can't take
-## fractional pixels.
-## The solution is to track the difference between the ideal reconstruction
-## and the practical one.
-## Then at the end do a small resize to force the practical reconstruction
-## to be the expected ideal size, in order to properly attach the padding.
-## The problem is pronounced when area >> tilesize
+
 def pad_m(m, tilesize, svsfile):
     # Infer how much of the original was cut given tilesize and dimensions:
     print ''
@@ -189,13 +192,8 @@ def pad_m(m, tilesize, svsfile):
     else:
         low = len(downsample) - 1
 
-    #print '\tSlide detected {}X'.format(app_mag)
-    #print '\tSlide levels: {}'.format(len(downsample))
-    #print '\tDownsample rate top to bottom: {}'.format(downsample[-1])
-    #print '\tUsing level as bottom: {}'.format(low)
-    #print '\tm = {}'.format(m.shape)
     tile_top = int(np.round(leveldims[0][0] * tilesize / leveldims[lvl20][0] /
-                   np.sqrt(downsample[lvl20])))  # (EQ 1)
+                            np.sqrt(downsample[lvl20])))  # (EQ 1)
     factor = int(downsample[low])  # This conversion isn't important
 
     print '\tFactor = {}'.format(factor)
@@ -205,25 +203,21 @@ def pad_m(m, tilesize, svsfile):
     # When it is fractional, and [r, c] ~ tilesize, there are problems
     ds_tilesize_float = tile_top / float(factor)
     ds_tilesize = tile_top / factor
-
-    print '\tds_tilesize_float = {}'.format(ds_tilesize_float)
-    print '\tIdeal r, c = ({}, {})'.format(ds_tilesize_float * m.shape[1],
-                                           ds_tilesize_float * m.shape[0])
-    print '\tds_tilesize = {}'.format(ds_tilesize)
-    print '\tReal r, c = ({}, {})'.format(ds_tilesize * m.shape[1],
-                                          ds_tilesize * m.shape[0])
+    real_c = int(m.shape[0] * ds_tilesize)
+    real_r = int(m.shape[1] * ds_tilesize)
 
     # Now get the padding w/r/t the ideal tile size
-    padc = leveldims[low][0] - (m.shape[1] * ds_tilesize_float)
-    padr = leveldims[low][1] - (m.shape[0] * ds_tilesize_float)
+    ideal_c = int(m.shape[0] * ds_tilesize_float)
+    ideal_r = int(m.shape[1] * ds_tilesize_float)
 
-    #print '\tTile top: {} '.format(tile_top)
-    #print '\tLow level dimensions rows: {} cols: {}'.format(
-    #    leveldims[low][1], leveldims[low][0])
-    #print '\tds_tilesize = {}'.format(ds_tilesize)
-    #print '\tpadr = {} padc = {}'.format(padr, padc)
+    padc = leveldims[low][0] - ideal_c
+    padr = leveldims[low][1] - ideal_r
 
-    return padr, padc, int(ds_tilesize)
+    d_x = ideal_c - real_c
+    d_y = ideal_r - real_r
+
+
+    return padr, padc, ds_tilesize, d_x, d_y
 
 
 # so ugly
@@ -274,7 +268,7 @@ def assemble_full_slide(scales=[756, 512, 256], **kwargs):
         # Integers
         projected_area = [r * kwargs['writesize'], c * kwargs['writesize']]
         #projected_ratio = projected_area[0] / float(projected_area[1])
-        low_padr, low_padc, writesize = pad_m(m, s, svsfile)
+        low_padr, low_padc, writesize, dx, dy = pad_m(m, s, svsfile)
 
         if int(svsfile.level_downsamples[-1]) == 64:
             low = len(svsfile.level_downsamples) - 2
@@ -293,42 +287,46 @@ def assemble_full_slide(scales=[756, 512, 256], **kwargs):
             adjusted_low_level_dims[0])
         # downsample_place_size = int(kwargs['writesize'] / downsample_factor)
 
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())
-        print '\tScale: {}'.format(s)
-        #print '\tProjected area = {} ratio: {}'.format(projected_area,
-        #                                               projected_ratio)
-        print '\tLow level padr: {} padc: {}'.format(low_padr, low_padc)
-        print '\tUsing level {} as the low resolution'.format(low)
-        print '\tLow level dims = {} ratio: {}'.format(low_level_dimensions,
-                                                       low_level_ratio)
-        print '\tAdjusted low lvl = {} ratio: {}'.format(
-            adjusted_low_level_dims, adjusted_low_level_ratio)
-        print '\tDownsample factor = {}'.format(downsample_factor)
-        print '\tWritesize = {}'.format(writesize)
+        #print ''
+        #print '[Output from : {}]'.format(PrintFrame())
+        #print '\tScale: {}'.format(s)
+        ##print '\tProjected area = {} ratio: {}'.format(projected_area,
+        ##                                               projected_ratio)
+        #print '\tLow level padr: {} padc: {}'.format(low_padr, low_padc)
+        #print '\tUsing level {} as the low resolution'.format(low)
+        #print '\tLow level dims = {} ratio: {}'.format(low_level_dimensions,
+        #                                               low_level_ratio)
+        #print '\tAdjusted low lvl = {} ratio: {}'.format(
+        #    adjusted_low_level_dims, adjusted_low_level_ratio)
+        #print '\tDownsample factor = {}'.format(downsample_factor)
+        #print '\tWritesize = {}'.format(writesize)
 
-        new_projected_area = [r * writesize, c * writesize]
-        new_projected_ratio = new_projected_area[0] / float(
-            new_projected_area[1])
-        print '\tNew projected area = {} ratio: {}'.format(
-            new_projected_area, new_projected_ratio)
-        print '\tProjected padding to add:'
-        print '\t\trows: {} cols: {}'.format(
-            low_level_dimensions[0] - new_projected_area[0],
-            low_level_dimensions[1] - new_projected_area[1])
+        #new_projected_area_float = [r * writesize_float, c * writesize_float]
+        #new_projected_ratio_float = new_projected_area_float[0] / float(
+        #    new_projected_area[1])
+
+        #new_projected_area = [r * writesize, c * writesize]
+        #new_projected_ratio = new_projected_area[0] / float(
+        #    new_projected_area[1])
+        #print '\tNew projected area = {} ratio: {}'.format(
+        #    new_projected_area, new_projected_ratio)
+        #print '\tProjected padding to add:'
+        #print '\t\trows: {} cols: {}'.format(
+        #    low_level_dimensions[0] - new_projected_area[0],
+        #    low_level_dimensions[1] - new_projected_area[1])
 
         # Construct scaled images
         # No overlay
         # pad_topleft = pre_pad(s, kwargs['overlap'], svsfile)
         scaleimages[k] = [
-            data.build_region(
+            cv2.resize(data.build_region(
                 region=[0, 0, c, r],
                 m=m,
                 source_dir=pd,
                 place_size=writesize,
                 overlap=ds_overlap,
                 overlay_dir='',
-                exactly=low_level_dimensions) for pd in probdirs
+                exactly=low_level_dimensions), (0,0), fx = dx, fy = dy) for pd in probdirs
         ]
 
     print ''
@@ -578,7 +576,7 @@ def parse_options(**kwargs):
 
 if __name__ == '__main__':
     run_devel()
-'''
+    '''
 
 // Notes
 
