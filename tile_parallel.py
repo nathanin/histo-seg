@@ -7,7 +7,7 @@ import seg_pipeline
 
 if __name__ == '__main__':
     # TODO fix these hard-coded paths to be passed in args
-    writeto = '/home/nathan/histo-seg/pca/seg_0.7'
+    writeto = '/home/nathan/histo-seg/pca/testers'
     sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
 
     weights = '/home/nathan/semantic-pca/weights/seg_0.6/norm_iter_150000.caffemodel'

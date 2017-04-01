@@ -461,7 +461,7 @@ def run_offsets(**kwargs):
 
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
-    scales = [512, 600, 712]
+    scales = [560, 1200, 1024]
 
     for s in scales:
         # Re-parse, I guess
