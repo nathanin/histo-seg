@@ -13,7 +13,7 @@ import numpy as np
 
 #imgdir = '/Users/nathaning/databases/ccRCC/for_segnet/mask_sub'
 imgdir = '/home/nathan/semantic-pca/data/seg_0.4/mask'
-class_num = 5 # range 0-3
+class_num = 5  # range 0-3
 
 term = os.path.join(imgdir, '*.png')
 imgs = glob.glob(term)
@@ -24,41 +24,36 @@ present = np.zeros(shape=(len(imgs), class_num), dtype=np.bool)
 freqs = np.zeros(shape=(1, class_num), dtype=np.float)
 
 for index, img in enumerate(imgs):
-	im = cv2.imread(img)
-	ux = np.unique(im)
-	if index % 200 == 0:
-		print index,
-		print img
-	for u in ux:
-		msk = im == u
-		counts[index, u] = msk.sum()
-		present[index, u] = True
+    im = cv2.imread(img)
+    ux = np.unique(im)
+    if index % 200 == 0:
+        print index,
+        print img
+    for u in ux:
+        msk = im == u
+        counts[index, u] = msk.sum()
+        present[index, u] = True
 
-		# New frequencies:
-		# print "u: {} {}".format(u, msk.sum()),
+        # New frequencies:
+        # print "u: {} {}".format(u, msk.sum()),
 
-	for u in range(class_num):
-		img_present = (present[:,u]).sum()*256*256
-		class_total = (counts[:,u]).sum()
+    for u in range(class_num):
+        img_present = (present[:, u]).sum() * 256 * 256
+        class_total = (counts[:, u]).sum()
 
-		div = class_total / float(img_present)
-		freqs[0,u] = div
-		# print "{} / {} = ".format(class_total, img_present), 
+        div = class_total / float(img_present)
+        freqs[0, u] = div
+        # print "{} / {} = ".format(class_total, img_present),
 
-		if index % 200 == 0:
-			print "f({}) = {}".format(u, div)
-
-
+        if index % 200 == 0:
+            print "f({}) = {}".format(u, div)
 
 med_freqs = np.median(freqs)
 
-weights = np.zeros(shape=freqs.shape, dtype = np.float)
+weights = np.zeros(shape=freqs.shape, dtype=np.float)
 
 for u in range(class_num):
-	w = med_freqs/freqs[0,u]
-	weights[0,u] = w
+    w = med_freqs / freqs[0, u]
+    weights[0, u] = w
 
-	print "Weight({}) = {}".format(u, w)
-
-
-
+    print "Weight({}) = {}".format(u, w)
