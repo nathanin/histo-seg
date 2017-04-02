@@ -216,6 +216,8 @@ def pad_m(m, tilesize, svsfile):
     d_x = ideal_c / float(real_c)
     d_y = ideal_r / float(real_r)
 
+    print '\tdx = {}'.format(d_x)
+    print '\tdy = {}'.format(d_y)
 
     return padr, padc, ds_tilesize, d_x, d_y
 
@@ -286,38 +288,6 @@ def assemble_full_slide(scales=[756, 512, 256], **kwargs):
         downsample_factor = projected_area[0] / float(
             adjusted_low_level_dims[0])
         # downsample_place_size = int(kwargs['writesize'] / downsample_factor)
-
-        #print ''
-        #print '[Output from : {}]'.format(PrintFrame())
-        #print '\tScale: {}'.format(s)
-        ##print '\tProjected area = {} ratio: {}'.format(projected_area,
-        ##                                               projected_ratio)
-        #print '\tLow level padr: {} padc: {}'.format(low_padr, low_padc)
-        #print '\tUsing level {} as the low resolution'.format(low)
-        #print '\tLow level dims = {} ratio: {}'.format(low_level_dimensions,
-        #                                               low_level_ratio)
-        #print '\tAdjusted low lvl = {} ratio: {}'.format(
-        #    adjusted_low_level_dims, adjusted_low_level_ratio)
-        #print '\tDownsample factor = {}'.format(downsample_factor)
-        #print '\tWritesize = {}'.format(writesize)
-
-        #new_projected_area_float = [r * writesize_float, c * writesize_float]
-        #new_projected_ratio_float = new_projected_area_float[0] / float(
-        #    new_projected_area[1])
-
-        #new_projected_area = [r * writesize, c * writesize]
-        #new_projected_ratio = new_projected_area[0] / float(
-        #    new_projected_area[1])
-        #print '\tNew projected area = {} ratio: {}'.format(
-        #    new_projected_area, new_projected_ratio)
-        #print '\tProjected padding to add:'
-        #print '\t\trows: {} cols: {}'.format(
-        #    low_level_dimensions[0] - new_projected_area[0],
-        #    low_level_dimensions[1] - new_projected_area[1])
-
-        # Construct scaled images
-        # No overlay
-        # pad_topleft = pre_pad(s, kwargs['overlap'], svsfile)
         scaleimages[k] = [
             cv2.resize(data.build_region(
                 region=[0, 0, c, r],
@@ -367,8 +337,6 @@ def assemble_full_slide(scales=[756, 512, 256], **kwargs):
         classim = np.mean(classim, axis=2)
         # classim = cv2.morphologyEx(classim, cv2.MORPH_OPEN, kernel)
 
-        ### TODO here add in some weighting
-        ### Probably pass in a vector of weights or something.
         mean_images[k] = 'class_{}_comboimg.jpg'.format(k)
         mean_images[k] = os.path.join(exproot, mean_images[k])
         print '\twriting to {}'.format(mean_images[k])
@@ -403,8 +371,6 @@ def assemble_full_slide(scales=[756, 512, 256], **kwargs):
         location=(0, 0), level=low, size=svsfile.level_dimensions[low])
     rgb = np.array(rgb)[:, :, :3]
     rgb = rgb[:, :, (2, 1, 0)]
-    print '\tLoaded RGB from level {} sized {}'.format(
-        len(svsfile.level_dimensions) - 1, svsfile.level_dimensions[-1][::-1])
     rgb = data.overlay_colors(rgb, comboclass)
     comboname = os.path.join(exproot, 'multiscale_colored.jpg')
     print '\tsaving to {}'.format(comboname)
