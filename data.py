@@ -4,14 +4,14 @@ One-stop solution to data pruning, preprocessing, and conversion in format usabl
 Two modes: training and inference
 
 Training takes two dirs, with images, similarly labeled.
-    The source images are multiplied and written out to _prepared folders
+The source images are multiplied and written out to _prepared folders
 
 Inference takes an whole slide file
-    A new dir is created underneath a <project_dir> with the name of the file.
-    The image is pre-processed at low-mag for tissue area
-    tissue area is tiled (with/without overlapping) and added to a `tiles` dir
-    A list.txt is written to <project_dir>/<image_name>/list.txt
-    A map.png and map.npy are written to <project_dir>/<image_name>
+A new dir is created underneath a <project_dir> with the name of the file.
+The image is pre-processed at low-mag for tissue area
+tissue area is tiled (with/without overlapping) and added to a `tiles` dir
+A list.txt is written to <project_dir>/<image_name>/list.txt
+A map.png and map.npy are written to <project_dir>/<image_name>
 
 '''
 
@@ -98,15 +98,15 @@ def data_coloration(t, mode, ext):
     for idx, name in enumerate(img_list):
         if idx % 500 == 0:
             print '\tcolorizing {} of {}'.format(idx, len(img_list))
-        for LMN, LSTD in zip(l_mean_range, l_std_range):
-            name_out = name.replace('.' + ext, 'c.' + ext)
-            if mode == 'feat':
-                img = cv2.imread(name)
-                img = coloration(img, LMN, LSTD)
-                cv2.imwrite(filename=name_out, img=img)
-            elif mode == 'anno':
-                img = cv2.imread(name)
-                cv2.imwrite(filename=name_out, img=img)
+            for LMN, LSTD in zip(l_mean_range, l_std_range):
+                name_out = name.replace('.' + ext, 'c.' + ext)
+                if mode == 'feat':
+                    img = cv2.imread(name)
+                    img = coloration(img, LMN, LSTD)
+                    cv2.imwrite(filename=name_out, img=img)
+                elif mode == 'anno':
+                    img = cv2.imread(name)
+                    cv2.imwrite(filename=name_out, img=img)
 
     print '\tDone color augmenting images in {}'.format(t)
 
@@ -186,21 +186,6 @@ def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
     return coords
 
 
-def partition_train_val(src, dst, trainpct=0.85, valpct=0.15):
-    '''
-    Training and validation partition
-    Take care of a lot of preprocessing here
-
-    1. Randomly partition data into training and validation according to the fractions
-    2. Make new directories underneath 'dst'
-
-    Assume src contains one dir for each class.
-    Make sure the classes are evenly represented :
-    ---------------------------------------------
-    '''
-    pass
-
-
 def delete_list(imglist):
     for img in imglist:
         os.remove(img)
@@ -263,8 +248,8 @@ def multiply_data(src, anno):
             n=numbersub)
 
         # Now it's OK to remove the originals
-    delete_list(srclist)
-    delete_list(annolist)
+        delete_list(srclist)
+        delete_list(annolist)
 
     data_coloration(src, 'feat', 'jpg')
     data_coloration(anno, 'anno', 'png')
@@ -446,12 +431,12 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove=False):
 
 # New: adding overlap option
 '''
-    Method for overlapping:
-        - Create lattice without considering overlap
-        - Add overlap to tilesize in both dims
-        - Writesize remains 256; that's what the network wants.
-        (change this by not being dum)
-'''
+Method for overlapping:
+    - Create lattice without considering overlap
+    - Add overlap to tilesize in both dims
+    - Writesize remains 256; that's what the network wants.
+    (change this by not being dum)
+    '''
 
 
 def make_inference(filename,
@@ -598,6 +583,7 @@ def assemble_rows(rows):
     img = rows[0]
     for r in rows[1:]:
         img = np.append(img, r, axis=0)
+
     return img
 
 
@@ -622,6 +608,7 @@ def partition_rows(m, h):
     rows = []
     for ix in range(h):
         rows.append(m[ix, :])
+
     return rows
 
 
@@ -656,8 +643,8 @@ def build_region(region,
                  overlay_dir,
                  max_w=10000,
                  exactly=None,
-                 pad=(0, 0),
-                 prepadding=(0, 0)):
+                 pad=(0, 0)):
+
     x, y, c, r = region
 
     print ''
@@ -690,16 +677,12 @@ def build_region(region,
     print '\tExact shape: {}'.format(exactly)
     if exactly is None:
         if img.shape[1] > max_w:
-            print '[Output from : {}]'.format(PrintFrame())
-            print '\tFound w > {}; resizing'.format(max_w)
             img = downsize_keep_ratio(
                 img, dim=1, target_dim=max_w, interp=cv2.INTER_AREA)
     elif not img.shape[:2] == exactly:
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())
-        print '\tFound img {} != target {}; padding'.format(
-            img.shape[:2], exactly)
-        img = add_padding(img, exactly)
+        #img = add_padding(img, exactly)
+        # ??????
+        img = cv2.resize(img, dsize=exactly[::-1])
 
     return img
 
