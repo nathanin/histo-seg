@@ -296,12 +296,12 @@ def main(imageroot, scales):
     cv2.imwrite(filename=colorfilename, img=colorimg)
 
     os.chdir(pwd)  # Change back
-    print 'DIR: {}'.format(os.getcwd())
-    time.sleep(30)
+    # TODO (nathan) implement cleanup
 
 if __name__ == '__main__':
     imageroot = sys.argv[1]
-    scales = [1150, 1250, 1500]
+    imageroot, _ = os.path.splitext(imageroot)
+    scales = [512, 600, 726]
     scale_weights = []  # TODO (nathan)
     #imageroot = '1305400'
     main(imageroot, scales)

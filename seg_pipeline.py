@@ -427,7 +427,7 @@ def run_offsets(**kwargs):
 
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
-    scales = [1500, 1250, 1150]
+    scales = [512, 600, 726]
 
     for s in scales:
         # Re-parse, I guess
@@ -446,18 +446,18 @@ def run_multiscale(**kwargs):
         run_inference(
             do_clean=False, do_parsing=False, do_assembly=False, **args)
 
-    if not kwargs['tileonly']:
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())
-        print '\tEntering assembly procedure for {}'.format(kwargs['filename'])
-        print_arg_set(**kwargs)
-        assemble_full_slide(scales=scales, **kwargs)
+    #if not kwargs['tileonly']:
+    #    print ''
+    #    print '[Output from : {}]'.format(PrintFrame())
+    #    print '\tEntering assembly procedure for {}'.format(kwargs['filename'])
+    #    print_arg_set(**kwargs)
+    #    assemble_full_slide(scales=scales, **kwargs)
 
-        tail = os.path.basename(kwargs['filename'])
-        slide_name, ext = os.path.splitext(tail)
-        exproot = os.path.join(kwargs['writeto'], slide_name)
-        print 'Cleaning up in {}'.format(exproot)
-        cleanup_all(exproot)
+    #    tail = os.path.basename(kwargs['filename'])
+    #    slide_name, ext = os.path.splitext(tail)
+    #    exproot = os.path.join(kwargs['writeto'], slide_name)
+    #    print 'Cleaning up in {}'.format(exproot)
+    #    cleanup_all(exproot)
 
 
 ##################################################################
