@@ -435,7 +435,7 @@ def run_multiscale(**kwargs):
         print '[Output from : {}]'.format(PrintFrame())
 
         args = parse_options(**kwargs)
-        # Remove some things
+        # Overwrite some settings
         args['tilesize'] = s  # Override tilesize
         args['sub_dirs'] = [
             '{}_{}'.format(subdir, args['tilesize'])
@@ -458,6 +458,8 @@ def run_multiscale(**kwargs):
     #    exproot = os.path.join(kwargs['writeto'], slide_name)
     #    print 'Cleaning up in {}'.format(exproot)
     #    cleanup_all(exproot)
+
+    return 0
 
 
 ##################################################################
@@ -537,6 +539,7 @@ def parse_options(**kwargs):
 
     if None in kwargs.itervalues():
         raise Exception('All the paths must be set')
+
     return kwargs
 
 

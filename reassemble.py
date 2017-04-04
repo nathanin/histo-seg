@@ -235,15 +235,17 @@ def impose_colors(label, colors):
     rgb[:,:,0] = b
     return rgb
 
-def main(imageroot, scales):
+def main(proj, svs, scales):
     # Set some constant
     pwd = os.getcwd()
-    svs = '{}.svs'.format(imageroot)
-    svs = os.path.join(pwd, svs)  # Give absolute path
+    #svs = '{}.svs'.format(imageroot)
+    workingdir = os.path.basename(svs)
+    workingdir,_ = os.path.splitext(workingdir)
     svs = OpenSlide(svs)
 
     # Do the thing I used to do in Matlab:
-    os.chdir(imageroot)  # so that all paths are relative now.
+    workingdir = os.path.join(proj, workingdir)
+    os.chdir(workingdir)
 
     # Populate a list of dirs that contain things we want
     dir_set = parse_dirs(scales)
@@ -299,12 +301,13 @@ def main(imageroot, scales):
     # TODO (nathan) implement cleanup
 
 if __name__ == '__main__':
-    imageroot = sys.argv[1]
-    imageroot, _ = os.path.splitext(imageroot)
+    proj = '/home/nathan/histo-seg/pca/seg_0.7'
+    svs = sys.argv[1]
+    #imageroot, _ = os.path.splitext(imageroot)
     scales = [512, 600, 726]
     scale_weights = []  # TODO (nathan)
     #imageroot = '1305400'
-    main(imageroot, scales)
+    main(proj, svs, scales)
 
 #    imageroot = '1305462'
 #    main(imageroot, scales)
