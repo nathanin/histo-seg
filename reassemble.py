@@ -301,7 +301,7 @@ def main(proj, svs, scales):
     # TODO (nathan) implement cleanup
 
 if __name__ == '__main__':
-    proj = '/home/nathan/histo-seg/pca/seg_0.7'
+    proj = '/home/nathan/histo-seg/pca/seg_0.6'
     svs = sys.argv[1]
     #imageroot, _ = os.path.splitext(imageroot)
     scales = [512, 600, 726]
