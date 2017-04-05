@@ -19,6 +19,7 @@ import glob
 import os
 import cv2
 import numpy as np
+import sys
 
 # /home/nathan/histo-seg/code/data_pipeline.py
 # def make_classification_training(src):
@@ -86,23 +87,29 @@ def impose_overlay(listfile, dst):
         cv2.imwrite(os.path.join(dst, writename), img)
 
 
-def make_segmentation_training(src, anno, root):
-    # remove_masktxt(anno) # depreciated as of 0.4
-
-    data.multiply_data(src, anno)
-
+def make_segmentation_training(src, anno, root, scales, multiplicity):
+    data.multiply_data(src, anno, scales, multiplicity)
     return makelist(src, anno, root)
 
 
 if __name__ == "__main__":
-    root = '/home/nathan/semantic-pca/data/seg_0.7/train'
+    scales = [512, 556, 596]
+    multiplicity = [9, 9, 9]
+    #dataset_root = sys.argv[1]
+    dataset_root = '/home/nathan/semantic-pca/data/seg_0.8'
+
+    root = os.path.join(dataset_root, 'train')
+    #root = '/home/nathan/semantic-pca/data/seg_0.8/train'
     src = os.path.join(root, 'jpg')
     anno = os.path.join(root, 'mask')
-    listfile = make_segmentation_training(src, anno, root)
+    listfile = make_segmentation_training(src, anno, root, scales, multiplicity)
     impose_overlay(listfile, os.path.join(root, 'anno_cmap'))
 
-    root = '/home/nathan/semantic-pca/data/seg_0.7/val'
+    # Validation, do less.
+    multiplicity = [2, 2, 2]
+    root = os.path.join(dataset_root, 'val')
+    #root = '/home/nathan/semantic-pca/data/seg_0.8/val'
     src = os.path.join(root, 'jpg')
     anno = os.path.join(root, 'mask')
-    listfile = make_segmentation_training(src, anno, root)
+    listfile = make_segmentation_training(src, anno, root, scales, multiplicity)
     impose_overlay(listfile, os.path.join(root, 'anno_cmap'))

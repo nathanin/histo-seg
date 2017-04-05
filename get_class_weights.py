@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 
 #imgdir = '/Users/nathaning/databases/ccRCC/for_segnet/mask_sub'
-imgdir = '/home/nathan/semantic-pca/data/seg_0.4/mask'
+imgdir = '/home/nathan/semantic-pca/data/source_training/mask'
 class_num = 5  # range 0-3
 
 term = os.path.join(imgdir, '*.png')
@@ -38,7 +38,7 @@ for index, img in enumerate(imgs):
         # print "u: {} {}".format(u, msk.sum()),
 
     for u in range(class_num):
-        img_present = (present[:, u]).sum() * 256 * 256
+        img_present = (present[:, u]).sum() * np.prod(im.shape[:2])
         class_total = (counts[:, u]).sum()
 
         div = class_total / float(img_present)
@@ -49,7 +49,6 @@ for index, img in enumerate(imgs):
             print "f({}) = {}".format(u, div)
 
 med_freqs = np.median(freqs)
-
 weights = np.zeros(shape=freqs.shape, dtype=np.float)
 
 for u in range(class_num):

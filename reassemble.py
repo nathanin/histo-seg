@@ -111,14 +111,19 @@ def get_settings(svs, scales, svs_level, overlap = 64):
         # Shape
         mshape = m.shape
         tile_top = tile_wrt_top(svs, scale)
+        #overlap_top = tile_wrt_top(svs, overlap)
 
         # padding needed
         tilesize, dxdy, targetsize = get_ideal_pad(svs, m, svs_level, tile_top)
 
         # downsampled overlap size
-        ts = scale + 2 * overlap  # the actual tile size used
-        factor = ts / float(tilesize)
-        overlap = int(overlap / factor)
+        # downsampled overlap w.r.t. the fixed 256 tilesize on disk
+        #ts = scale + 2 * overlap  # the actual tile size used
+        #factor = ts / float(256)
+        factor = (scale + 2 * overlap) / float(256)
+
+        # Don't override `overlap` ; we're inside a loop
+        ds_overlap = int(overlap / factor)
 
         # Build the output dict
         settings[scale].append(m) # 0
@@ -126,7 +131,7 @@ def get_settings(svs, scales, svs_level, overlap = 64):
         settings[scale].append(dxdy)  # 2
         settings[scale].append(targetsize)  # 3
         settings[scale].append(svs_low)  # 4
-        settings[scale].append(overlap)  # 5
+        settings[scale].append(ds_overlap)  # 5
 
     return settings
 
@@ -235,6 +240,7 @@ def impose_colors(label, colors):
     rgb[:,:,0] = b
     return rgb
 
+
 def main(proj, svs, scales):
     # Set some constant
     pwd = os.getcwd()
@@ -244,18 +250,16 @@ def main(proj, svs, scales):
     svs = OpenSlide(svs)
 
     # Do the thing I used to do in Matlab:
+    # now all the paths are going to be relative
     workingdir = os.path.join(proj, workingdir)
     os.chdir(workingdir)
 
     # Populate a list of dirs that contain things we want
+    '''
+    # dir_set[key] = [key_scale1, key_scale2, etc.]
+    '''
     dir_set = parse_dirs(scales)
 
-    '''
-    # Each key in dir_set is an output we care about:
-    # dir_set[key] = [key_scale1, key_scale2, etc.]
-    # Before launching reassembly, pull out all the variables from
-    # svs and npy files:
-    '''
     svs_level = 4
     while svs_level >= svs.level_count: svs_level -= 1
     settings = get_settings(svs, scales, svs_level)
@@ -303,6 +307,9 @@ def main(proj, svs, scales):
 if __name__ == '__main__':
     proj = '/home/nathan/histo-seg/pca/seg_0.6'
     svs = sys.argv[1]
+    print 'Working on image: {}'.format(svs)
+    print 'Reading and writing to {}'.format(proj)
+    #svs = '/home/nathan/data/pca_wsi/1305485.svs'
     #imageroot, _ = os.path.splitext(imageroot)
     scales = [512, 600, 726]
     scale_weights = []  # TODO (nathan)

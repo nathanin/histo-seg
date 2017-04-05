@@ -187,6 +187,7 @@ def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
 
 
 def delete_list(imglist):
+    print 'Removing {} files'.format(len(imglist))
     for img in imglist:
         os.remove(img)
 
@@ -209,7 +210,7 @@ def multiply_one_folder(src):
     data_coloration(src, 'feat', 'jpg')
 
 
-def multiply_data(src, anno):
+def multiply_data(src, anno, scales = [512], multiplicity = [9]):
     '''
     Define a set of transformations, to be applied sequentially, to images.
     For each image, track it's annotation image and copy the relevant transformations.
@@ -231,11 +232,15 @@ def multiply_data(src, anno):
         print 'non-1 response. exiting TODO: Make this nicer'
         return 0
 
+    if len(scales) != len(multiplicity):
+        print 'Warning: scales and multiplicity must match lengths'
+        return 0
+
     srclist = sorted(glob.glob(os.path.join(src, '*.jpg')))
     annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
 
     # Multi-scale
-    for scale, numbersub in zip([1024, 512], [9, 9]):
+    for scale, numbersub in zip(scales, multiplicity):
         print 'Extracting {} subregions of size {}'.format(numbersub, scale)
         coords = sub_img(
             srclist, ext='jpg', mode='3ch', edge=scale, n=numbersub)
@@ -247,9 +252,10 @@ def multiply_data(src, anno):
             coords=coords,
             n=numbersub)
 
-        # Now it's OK to remove the originals
-        delete_list(srclist)
-        delete_list(annolist)
+
+    # Now it's OK to remove the originals
+    delete_list(srclist)
+    delete_list(annolist)
 
     data_coloration(src, 'feat', 'jpg')
     data_coloration(anno, 'anno', 'png')

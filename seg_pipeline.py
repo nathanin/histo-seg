@@ -247,8 +247,8 @@ def assemble_full_slide(scales=[756, 512, 256], **kwargs):
         ds_overlap = get_downsample_overlap(s, kwargs['writesize'],
                                             kwargs['overlap'])
         print ''
-        print ' ######################################################################## '
-        print ' ######################################################################## '
+        print ' ############################################################## '
+        print ' ############################################################## '
         print ''
         print '[Output from : {}]'.format(PrintFrame())
         print '\tGathering scale {} ({} of {})'.format(s, k + 1, len(scales))
