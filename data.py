@@ -178,7 +178,9 @@ def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
                     dsize=(writesize, writesize),
                     interpolation=cv2.INTER_NEAREST)
 
-                cv2.imwrite(filename=name, img=subimg)
+            # this is always going to write
+            # linter places it in there with the others
+            cv2.imwrite(filename=name, img=subimg)
 
             if gencoord:
                 coords[index] = coordsout
@@ -244,6 +246,7 @@ def multiply_data(src, anno, scales = [512], multiplicity = [9]):
         print 'Extracting {} subregions of size {}'.format(numbersub, scale)
         coords = sub_img(
             srclist, ext='jpg', mode='3ch', edge=scale, n=numbersub)
+        print 'Repeating for png'
         _ = sub_img(
             annolist,
             ext='png',
