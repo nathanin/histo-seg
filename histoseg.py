@@ -99,11 +99,6 @@ def impose_colors(label, colors):
         b[bin_l] = colors[l, 2]
 
     #TODO here fix so it just uses one cat to join r, g, and b
-    #rgb = np.zeros(shape=(label.shape[0], label.shape[1], 3), dtype=np.uint8)
-    #RGB --> BGR ?? I think OpenCV uses BGR. Ditch OpenCV and use scipy?
-    #rgb[:, :, 2] = r
-    #rgb[:, :, 1] = g
-    #rgb[:, :, 0] = b
     rgb = np.dstack((b,g,r))
     return rgb
 
