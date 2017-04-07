@@ -309,12 +309,7 @@ if __name__ == '__main__':
     svs = sys.argv[1]
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
-    #svs = '/home/nathan/data/pca_wsi/1305485.svs'
-    #imageroot, _ = os.path.splitext(imageroot)
+
     scales = [512, 600, 656]
     scale_weights = []  # TODO (nathan)
-    #imageroot = '1305400'
     main(proj, svs, scales)
-
-#    imageroot = '1305462'
-#    main(imageroot, scales)
