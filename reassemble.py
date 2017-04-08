@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 '''
 
 Reassemble from tiles
@@ -18,6 +17,7 @@ import generate_color
 
 # Set defaults
 result_types = ['prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+
 
 def parse_dirs(scales, result_types=result_types):
     '''
@@ -45,12 +45,14 @@ def tile_wrt_top(svs, scale):
     ds_20 = downsample[lvl20]
     dims_20 = leveldims[lvl20]
 
-    return int(np.round(leveldims[0][0] * scale / dims_20[0] /
-                        np.sqrt(int(ds_20))))  # (EQ 1)
+    return int(
+        np.round(leveldims[0][0] * scale / dims_20[0] /
+                 np.sqrt(int(ds_20))))  # (EQ 1)
 
 
 def get_ideal_pad(svs, m, level, tile_top):
-    factor = int(svs.level_downsamples[level])  # This conversion isn't important
+    factor = int(
+        svs.level_downsamples[level])  # This conversion isn't important
     lvl_dims = svs.level_dimensions[level]
     lvl_dims = lvl_dims[::-1]
 
@@ -82,7 +84,7 @@ def get_ideal_pad(svs, m, level, tile_top):
     return tilesize, (dx, dy), (ideal_r, ideal_c)
 
 
-def get_settings(svs, scales, svs_level, overlap = 64):
+def get_settings(svs, scales, svs_level, overlap=64):
     '''
     Returns a list the length of scales
     For each scale we need the expected reassembly size,
@@ -126,7 +128,7 @@ def get_settings(svs, scales, svs_level, overlap = 64):
         ds_overlap = int(overlap / factor)
 
         # Build the output dict
-        settings[scale].append(m) # 0
+        settings[scale].append(m)  # 0
         settings[scale].append(tilesize)  # 1
         settings[scale].append(dxdy)  # 2
         settings[scale].append(targetsize)  # 3
@@ -135,7 +137,8 @@ def get_settings(svs, scales, svs_level, overlap = 64):
 
     return settings
 
-def place_padding(img, target, value = 0):
+
+def place_padding(img, target, value=0):
     # We have to implement this because it's desired behavior to add
     # padding on the ends only, not as a border
     # and i couldn't find something to do that within
@@ -147,8 +150,8 @@ def place_padding(img, target, value = 0):
     r = targetr - imgr
     c = targetc - imgc
 
-    padr = np.zeros(shape = (r,targetc,3), dtype = img.dtype)
-    padc = np.zeros(shape = (imgr,c,3), dtype = img.dtype)
+    padr = np.zeros(shape=(r, targetc, 3), dtype=img.dtype)
+    padc = np.zeros(shape=(imgr, c, 3), dtype=img.dtype)
 
     # place in column pad first, then rows:
     img = np.hstack((img, padc))
@@ -177,26 +180,28 @@ def rebuild(settings, dir_set, r):
 
     # Unroll the loop for readability
     for s in settings.iterkeys():
-        m, tilesize, dxdy, target_dim, svs_low, overlap  = settings[s][:]
+        m, tilesize, dxdy, target_dim, svs_low, overlap = settings[s][:]
         region = [0, 0, m.shape[1], m.shape[0]]  # Flipped in data.*()
         source_dir = '{}_{}'.format(r, s)
-        writename = '{}_{}.jpg'.format(r,s)
-        region = data.build_region(region=region,
-                                   m=m,
-                                   source_dir=source_dir,
-                                   place_size=tilesize,
-                                   overlap=overlap,
-                                   overlay_dir='',
-                                   max_w=None,
-                                   exactly=target_dim)
+        writename = '{}_{}.jpg'.format(r, s)
+        region = data.build_region(
+            region=region,
+            m=m,
+            source_dir=source_dir,
+            place_size=tilesize,
+            overlap=overlap,
+            overlay_dir='',
+            max_w=None,
+            exactly=target_dim)
         region = place_padding(region, svs_low)
         cv2.imwrite(filename=writename, img=region)
         scaleimgs.append(region)
 
     return scaleimgs
 
+
 # TODO (nathan) weighting
-def aggregate_scales(imgs, kernel=None):
+def aggregate_scales(imgs, kernel=None, weights=None):
     if kernel is None:
         combo = [img for img in imgs]
     else:
@@ -204,13 +209,13 @@ def aggregate_scales(imgs, kernel=None):
 
     # Weights here.
     combo = np.dstack(combo)  # canon
-    combo = np.mean(combo, axis=2)
+    combo = np.average(combo, axis=2, weights=weights)
     return combo
 
 
 def decision(classimg, svs, svs_level, colors):
-    rgb = svs.read_region((0,0), level=svs_level,
-                          size=svs.level_dimensions[svs_level])
+    rgb = svs.read_region(
+        (0, 0), level=svs_level, size=svs.level_dimensions[svs_level])
     rgb = np.array(rgb)[:, :, :3]
     rgb = rgb[:, :, (2, 1, 0)]
 
@@ -235,18 +240,18 @@ def impose_colors(label, colors):
         b[bin_l] = colors[l, 2]
 
     rgb = np.zeros(shape=(label.shape[0], label.shape[1], 3), dtype=np.uint8)
-    rgb[:,:,2] = r
-    rgb[:,:,1] = g
-    rgb[:,:,0] = b
+    rgb[:, :, 2] = r
+    rgb[:, :, 1] = g
+    rgb[:, :, 0] = b
     return rgb
 
 
-def main(proj, svs, scales):
+def main(proj, svs, scales, scale_weights=None):
     # Set some constant
     pwd = os.getcwd()
     #svs = '{}.svs'.format(imageroot)
     workingdir = os.path.basename(svs)
-    workingdir,_ = os.path.splitext(workingdir)
+    workingdir, _ = os.path.splitext(workingdir)
     svs = OpenSlide(svs)
 
     # Do the thing I used to do in Matlab:
@@ -261,9 +266,9 @@ def main(proj, svs, scales):
     dir_set = parse_dirs(scales)
 
     svs_level = 4
-    while svs_level >= svs.level_count: svs_level -= 1
+    while svs_level >= svs.level_count:
+        svs_level -= 1
     settings = get_settings(svs, scales, svs_level)
-
     '''
     # Now ready to do reassembly; re-use ~/histo-seg/code/data.py
     # Pass in proper settings to assemble_region:
@@ -274,7 +279,6 @@ def main(proj, svs, scales):
     # :: loop over result_types
     '''
     scaleimgs = [rebuild(settings, dir_set, r) for r in result_types]
-
     '''
     # scaleimgs is like:
     #   [[c0_s1, c0_s2, c0_s3],
@@ -283,17 +287,22 @@ def main(proj, svs, scales):
     # Now combine each class
     # With a little smoothing and weighting
     '''
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10,10))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10, 10))
     colors = generate_color.generate(
         n=len(result_types), whiteidx=3, cmap='brg')
-    # lazy
+
+    # Aggregate from the assembled files
+    # Fix scale_weights
+    #if scale_weights is None:
+    #    scale_weights = [1] * len(scales)
     classimg = []
-    for c,r in zip(scaleimgs, result_types):
+    for c, r in zip(scaleimgs, result_types):
         filename = 'combo_{}.jpg'.format(r)
-        combo = aggregate_scales(c)
+        combo = aggregate_scales(c, kernel=kernel, weights=scale_weights)
         classimg.append(combo)  # Important to go in order
         cv2.imwrite(filename=filename, img=combo)
 
+    # Do the final classification
     classimg = np.dstack(classimg)
     classimg, colorimg = decision(classimg, svs, svs_level, colors)
     classfilename = 'class.png'
@@ -304,12 +313,16 @@ def main(proj, svs, scales):
     os.chdir(pwd)  # Change back
     # TODO (nathan) implement cleanup
 
+
 if __name__ == '__main__':
     proj = '/home/nathan/histo-seg/pca/seg_0.8'
     svs = sys.argv[1]
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
 
-    scales = [512, 600, 656]
-    scale_weights = []  # TODO (nathan)
-    main(proj, svs, scales)
+    # The strategy for weighting is to have scales not explicitly
+    # included in the training weighed less
+    scales = [384, 512, 600, 656]
+    scale_weights = [1, 0.75, 0.5, 0.5]  # TODO (nathan)
+
+    main(proj, svs, scales, scale_weights)
