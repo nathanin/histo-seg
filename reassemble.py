@@ -202,15 +202,22 @@ def rebuild(settings, dir_set, r):
 
 # TODO (nathan) weighting
 def aggregate_scales(imgs, kernel=None, weights=None):
-    if kernel is None:
-        combo = [img for img in imgs]
-    else:
-        combo = [cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel) for img in imgs]
+    #if kernel is None:
+    combo = [img for img in imgs]
+    #else:
+        # cv2 insists on returning 3-channel images
+        #combo = [cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)[:,:,0] for img in imgs]
 
     # Weights here.
     combo = np.dstack(combo)  # canon
     combo = np.average(combo, axis=2, weights=weights)
-    return combo
+
+    # Smooth again?
+    if kernel is None:
+        return combo
+    else:
+        return cv2.morphologyEx(combo, cv2.MORPH_OPEN, kernel)[:,:,0]
+    #return combo
 
 
 def decision(classimg, svs, svs_level, colors):
@@ -268,6 +275,7 @@ def main(proj, svs, scales, scale_weights=None):
     svs_level = 4
     while svs_level >= svs.level_count:
         svs_level -= 1
+    svs_level -= 1  # Use one less than the lowest level for better res.
     settings = get_settings(svs, scales, svs_level)
     '''
     # Now ready to do reassembly; re-use ~/histo-seg/code/data.py
@@ -316,7 +324,8 @@ def main(proj, svs, scales, scale_weights=None):
 
 if __name__ == '__main__':
     proj = '/home/nathan/histo-seg/pca/seg_0.8'
-    svs = sys.argv[1]
+    #svs = sys.argv[1]
+    svs = '/home/nathan/data/pca_wsi/1305473.svs'
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
 
