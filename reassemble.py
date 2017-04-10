@@ -4,7 +4,7 @@
 Reassemble from tiles
 
 '''
-import time
+import gc
 import numpy as np
 import os
 import sys
@@ -55,6 +55,8 @@ def get_ideal_pad(svs, m, level, tile_top):
         svs.level_downsamples[level])  # This conversion isn't important
     lvl_dims = svs.level_dimensions[level]
     lvl_dims = lvl_dims[::-1]
+    lvl_dims = (lvl_dims[0] / 2, lvl_dims[1] / 2)
+    factor *= 2
 
     # Tilesize w.r.t. the target size (how big to make things)
     # This one can be fractional.
@@ -74,8 +76,8 @@ def get_ideal_pad(svs, m, level, tile_top):
     ideal_c = int(tilesC * tilesize_float)
     ideal_r = int(tilesR * tilesize_float)
 
-    padc = lvl_dims[0] - ideal_c
-    padr = lvl_dims[1] - ideal_r
+    #padc = lvl_dims[0] - ideal_c
+    #padr = lvl_dims[1] - ideal_r
 
     dx = ideal_c / float(real_c)
     dy = ideal_r / float(real_r)
@@ -97,6 +99,7 @@ def get_settings(svs, scales, svs_level, overlap=64):
     #while svs_level >= svs.level_count: svs_level -= 1
     svs_low = svs.level_dimensions[svs_level]
     svs_low = svs_low[::-1]  # Flip b/c PIL is dumb
+    svs_low = (svs_low[0] / 2, svs_low[1] / 2)
 
     # Loop over scales
     # Populate a list like:
@@ -184,6 +187,8 @@ def rebuild(settings, dir_set, r):
         region = [0, 0, m.shape[1], m.shape[0]]  # Flipped in data.*()
         source_dir = '{}_{}'.format(r, s)
         writename = '{}_{}.jpg'.format(r, s)
+        print 'Working on {}'.format(writename)
+        print 'Source_dir: {}'.format(source_dir)
         region = data.build_region(
             region=region,
             m=m,
@@ -193,8 +198,11 @@ def rebuild(settings, dir_set, r):
             overlay_dir='',
             max_w=None,
             exactly=target_dim)
+
         region = place_padding(region, svs_low)
         cv2.imwrite(filename=writename, img=region)
+        if len(region.shape) == 3:
+            region = region[:,:,0]
         scaleimgs.append(region)
 
     return scaleimgs
@@ -210,14 +218,22 @@ def aggregate_scales(imgs, kernel=None, weights=None):
 
     # Weights here.
     combo = np.dstack(combo)  # canon
+    #combo = np.argmax(combo,
+    del imgs
+    del img
+    gc.collect()
+
+    if weights and len(weights) != combo.shape[2]:
+        print 'WARNING Weights mismatching with image shape'
+        while len(weights) < combo.shape[2]: weights.append(1.0)
+
     combo = np.average(combo, axis=2, weights=weights)
 
-    # Smooth again?
+    ## Smooth again?
     if kernel is None:
         return combo
     else:
-        return cv2.morphologyEx(combo, cv2.MORPH_OPEN, kernel)[:,:,0]
-    #return combo
+        return cv2.morphologyEx(combo, cv2.MORPH_OPEN, kernel)
 
 
 def decision(classimg, svs, svs_level, colors):
@@ -225,6 +241,7 @@ def decision(classimg, svs, svs_level, colors):
         (0, 0), level=svs_level, size=svs.level_dimensions[svs_level])
     rgb = np.array(rgb)[:, :, :3]
     rgb = rgb[:, :, (2, 1, 0)]
+    rgb = cv2.resize(rgb, dsize=(0,0), fx=0.5, fy=0.5)
 
     classimg = np.argmax(classimg, axis=2)
     classimg = impose_colors(classimg, colors)
@@ -312,6 +329,11 @@ def main(proj, svs, scales, scale_weights=None):
 
     # Do the final classification
     classimg = np.dstack(classimg)
+
+    # Write out something pretty
+    cv2.imwrite(filename='dev_rgba.jpg', img=classimg[:,:,:4])
+
+    # Make decisions and overlay discrete classes
     classimg, colorimg = decision(classimg, svs, svs_level, colors)
     classfilename = 'class.png'
     colorfilename = 'color.jpg'
@@ -324,14 +346,14 @@ def main(proj, svs, scales, scale_weights=None):
 
 if __name__ == '__main__':
     proj = '/home/nathan/histo-seg/pca/seg_0.8'
-    #svs = sys.argv[1]
-    svs = '/home/nathan/data/pca_wsi/1305473.svs'
+    svs = sys.argv[1]
+    #svs = '/home/nathan/data/pca_wsi/1305471.svs'
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
 
     # The strategy for weighting is to have scales not explicitly
     # included in the training weighed less
     scales = [384, 512, 600, 656]
-    scale_weights = [1, 0.75, 0.5, 0.5]  # TODO (nathan)
+    scale_weights = [2, 0.75, 1, 0.5]  # TODO (nathan)
 
     main(proj, svs, scales, scale_weights)

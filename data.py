@@ -656,12 +656,12 @@ def build_region(region,
 
     x, y, c, r = region
 
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tRegion source: {}'.format(source_dir)
-    print '\tx: {} y: {} c: {} r: {}'.format(x, y, c, r)
-    print '\tPlacing in tiles: {}'.format(place_size)
-    print '\tUsing level overlap = {}'.format(overlap)
+    #print ''
+    #print '[Output from : {}]'.format(PrintFrame())
+    #print '\tRegion source: {}'.format(source_dir)
+    #print '\tx: {} y: {} c: {} r: {}'.format(x, y, c, r)
+    #print '\tPlacing in tiles: {}'.format(place_size)
+    #print '\tUsing level overlap = {}'.format(overlap)
 
     # Check if the output will be large
     if c * r * (place_size**2) > (2**31) / 3:
