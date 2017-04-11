@@ -246,6 +246,13 @@ def decision(classimg, svs, svs_level, colors):
     classimg = np.argmax(classimg, axis=2)
     classimg = impose_colors(classimg, colors)
 
+
+    # Final assertion that the images be the same shape.
+    # at most, off by 1 px rounding error:
+    if rgb.shape != classimg.shape:
+        tt = classimg.shape[:2]  # Why is it flipped
+        rgb = cv2.resize(rgb, dsize=(tt[1], tt[0]))
+
     colorimg = data.overlay_colors(rgb, classimg)
 
     return classimg, colorimg
