@@ -93,20 +93,20 @@ def make_segmentation_training(src, anno, root, scales, multiplicity):
 
 
 if __name__ == "__main__":
-    scales = [512, 556, 596]
-    multiplicity = [9, 9, 9]
-    #dataset_root = sys.argv[1]
-    dataset_root = '/home/nathan/semantic-pca/data/seg_0.8'
+    scales = [512]
+    multiplicity = [21]
+    dataset_root = sys.argv[1]
+    #dataset_root = '/home/nathan/semantic-pca/data/seg_0.9'
 
-    #root = os.path.join(dataset_root, 'train')
-    ##root = '/home/nathan/semantic-pca/data/seg_0.8/train'
-    #src = os.path.join(root, 'jpg')
-    #anno = os.path.join(root, 'mask')
-    #listfile = make_segmentation_training(src, anno, root, scales, multiplicity)
-    #impose_overlay(listfile, os.path.join(root, 'anno_cmap'))
+    root = os.path.join(dataset_root, 'train')
+    #root = '/home/nathan/semantic-pca/data/seg_0.8/train'
+    src = os.path.join(root, 'jpg')
+    anno = os.path.join(root, 'mask')
+    listfile = make_segmentation_training(src, anno, root, scales, multiplicity)
+    impose_overlay(listfile, os.path.join(root, 'anno_cmap'))
 
     # Validation, do less.
-    multiplicity = [2, 2, 2]
+    multiplicity = [4]
     root = os.path.join(dataset_root, 'val')
     #root = '/home/nathan/semantic-pca/data/seg_0.8/val'
     src = os.path.join(root, 'jpg')

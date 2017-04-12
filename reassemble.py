@@ -208,17 +208,14 @@ def rebuild(settings, dir_set, r):
     return scaleimgs
 
 
-# TODO (nathan) weighting
+
 def aggregate_scales(imgs, kernel=None, weights=None):
     #if kernel is None:
     combo = [img for img in imgs]
-    #else:
-        # cv2 insists on returning 3-channel images
-        #combo = [cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)[:,:,0] for img in imgs]
 
-    # Weights here.
     combo = np.dstack(combo)  # canon
-    #combo = np.argmax(combo,
+
+    # Attempt to manage the memory a little
     del imgs
     del img
     gc.collect()
@@ -227,35 +224,47 @@ def aggregate_scales(imgs, kernel=None, weights=None):
         print 'WARNING Weights mismatching with image shape'
         while len(weights) < combo.shape[2]: weights.append(1.0)
 
+    # Weights here.
     combo = np.average(combo, axis=2, weights=weights)
 
     ## Smooth again?
     if kernel is None:
         return combo
     else:
+        combo = cv2.morphologyEx(combo, cv2.MORPH_CLOSE, kernel)
         return cv2.morphologyEx(combo, cv2.MORPH_OPEN, kernel)
 
 
 def decision(classimg, svs, svs_level, colors):
+    # Load up RGB image
     rgb = svs.read_region(
         (0, 0), level=svs_level, size=svs.level_dimensions[svs_level])
     rgb = np.array(rgb)[:, :, :3]
     rgb = rgb[:, :, (2, 1, 0)]
     rgb = cv2.resize(rgb, dsize=(0,0), fx=0.5, fy=0.5)
 
-    classimg = np.argmax(classimg, axis=2)
-    classimg = impose_colors(classimg, colors)
+    # TODO (nathan) Apply some linear weighting before the argmax
+    labelmask = np.argmax(classimg, axis=2)
 
+    # Reassign Grade 5 to Grade 4. Re-label "high grade"
+    labelmask[labelmask == 4] = 1
 
-    # Final assertion that the images be the same shape.
+    # Convert lable matrix to solid RGB colors
+    labelmask = impose_colors(labelmask, colors)
+
+    # Check assertion that the images be the same shape.
     # at most, off by 1 px rounding error:
     if rgb.shape != classimg.shape:
         tt = classimg.shape[:2]  # Why is it flipped
         rgb = cv2.resize(rgb, dsize=(tt[1], tt[0]))
 
-    colorimg = data.overlay_colors(rgb, classimg)
+    # Scale classimg to 0-255 ?
 
-    return classimg, colorimg
+    colorimg = data.overlay_colors(rgb, labelmask)
+
+    colorimg_no_argmax = data.overlay_colors(rgb, classimg[:,:,:3])
+
+    return labelmask, colorimg, colorimg_no_argmax
 
 
 def impose_colors(label, colors):
@@ -277,7 +286,7 @@ def impose_colors(label, colors):
     return rgb
 
 
-def main(proj, svs, scales, scale_weights=None):
+def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     # Set some constant
     pwd = os.getcwd()
     #svs = '{}.svs'.format(imageroot)
@@ -319,9 +328,11 @@ def main(proj, svs, scales, scale_weights=None):
     # Now combine each class
     # With a little smoothing and weighting
     '''
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10, 10))
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    #kernel = None
     colors = generate_color.generate(
-        n=len(result_types), whiteidx=3, cmap='brg')
+        n=len(result_types)-1, whiteidx=ignorelabel, cmap='gist_rainbow')
 
     # Aggregate from the assembled files
     # Fix scale_weights
@@ -336,16 +347,24 @@ def main(proj, svs, scales, scale_weights=None):
 
     # Do the final classification
     classimg = np.dstack(classimg)
+    # Combine the high grade layers
+    # Want to do it so that they add to each other. Do it after decision?
+    #classimg[:,:,1] += classimg[:,:,4]
+    #classimg = classimg[:,:,:4]
 
     # Write out something pretty
+    # Keep the indexing in case there's ever more than 4 layers
+    # TODO (nathan) put a colormap here to handle more than 4 channels
     cv2.imwrite(filename='dev_rgba.jpg', img=classimg[:,:,:4])
 
     # Make decisions and overlay discrete classes
-    classimg, colorimg = decision(classimg, svs, svs_level, colors)
+    classimg, colorimg, colorimg2 = decision(classimg, svs, svs_level, colors)
     classfilename = 'class.png'
     colorfilename = 'color.jpg'
+    color2filename = 'color2.jpg'
     cv2.imwrite(filename=classfilename, img=classimg)
     cv2.imwrite(filename=colorfilename, img=colorimg)
+    cv2.imwrite(filename=color2filename, img=colorimg2)
 
     os.chdir(pwd)  # Change back
     # TODO (nathan) implement cleanup
@@ -354,13 +373,12 @@ def main(proj, svs, scales, scale_weights=None):
 if __name__ == '__main__':
     proj = '/home/nathan/histo-seg/pca/seg_0.8'
     svs = sys.argv[1]
-    #svs = '/home/nathan/data/pca_wsi/1305471.svs'
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
 
     # The strategy for weighting is to have scales not explicitly
     # included in the training weighed less
-    scales = [384, 512, 600, 656]
-    scale_weights = [2, 0.75, 1, 0.5]  # TODO (nathan)
+    scales = [384, 600, 656]
+    scale_weights = [2, 1, 1.5]  # TODO (nathan)
 
     main(proj, svs, scales, scale_weights)

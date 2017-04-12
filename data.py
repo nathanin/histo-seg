@@ -91,7 +91,7 @@ def coloration(img, l_mean, l_std):
 
 def data_coloration(t, mode, ext):
     # TODO replace with random  numbers generated from uniform distrib.
-    l_mean_range = (144.048, 130.22, 145.0, 135.5, 140.0)
+    l_mean_range = (144.048, 130.22, 135.5, 140.0)
     l_std_range = (40.23, 35.00, 35.00, 37.5)
 
     img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
