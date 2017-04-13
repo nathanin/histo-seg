@@ -323,50 +323,51 @@ def update_map(tilemap, r, c, value):
     return tilemap
 
 
-def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile'):
+def nrow_ncol(wsi, tilesize, overlap):
+    lvl20x, dim20 = pull_svs_stats(wsi)
+    resize_factor = int(wsi.level_downsamples[lvl20x])
 
-    lvl20x, dim20x = pull_svs_stats(wsi)
-    resize_factor = int(wsi.level_downsamples[lvl20x])  # 1 if the slide is 20x
-
-    # tilesize and overlap given w.r.t. 20X
     dims_top = wsi.level_dimensions[0]
     tile_top = int(
-        dims_top[0] * tilesize / dim20x[0] / np.sqrt(resize_factor))  # (EQ 1)
+        dims_top[0] * tilesize / dim20x[0] / np.sqrt(resize_factor))
     overlap_top = int(overlap * np.sqrt(resize_factor))
-
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\ttilesize w.r.t. level 0 = {}'.format(tile_top)
-    print '\ttilesize w.r.t. 20x (level {}) = {}'.format(lvl20x, tilesize)
-    print '\tOverlap value w.r.t. level 0 = {}'.format(overlap_top)
-    print '\tOverlap value w.r.t. 20x (level {}) = {}'.format(lvl20x, overlap)
-    print '\tWriting tiles into: {}'.format(writeto)
 
     nrow = dims_top[1] / tile_top
     ncol = dims_top[0] / tile_top
-    print '\tRounding off {} from rows and {} from cols'.format(
-        dims_top[1] - nrow * tile_top, dims_top[0] - ncol * tile_top)
 
-    # 3-17-17 test 0:nrow-1
-    # Removing the first and last causes problems reassembling
-    # The solution is to re-infer all these things at reassembly time
-    # I guess that shouldn't be too hard but it's not something I want to explore
+    return tile_top, overlap_top, nrow, ncol
+
+
+def locate_tumor(wsi, tilesize, overlap):
+    # Return a tilemap
+    # Get some info about the slide
+    tile_top, nrow, ncol = nrow_ncol(wsi, tilesize, overlap)
+    tilemap = np.zeros(shape=(nrow, ncol), dtype=np.bool)
+    lst = [(k, j) for k in range(1, nrow - 1) for j in range(1, ncol - 1)]
+
+    # Try a quick threshold
+    lowres = wsi.level_dimensions[-1]
+
+
+
+def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile',
+             tilemap=None):
+    # Functionized. 4-17. NI
+    tile_top, overlap_top, nrow, ncol = nrow_ncol(wsi, tilesize, overlap)
+
+    # There's probably some clever way to write this
+    if tilemap:
+        tumor_located = tilemap
+        tilemap = np.zeros(shape=(nrow, ncol), dtype=np.uint32)
+    else:
+        tilemap = np.zeros(shape=(nrow, ncol), dtype=np.uint32)
+        tumor_located = tilemap + 1
+        tumor_located.dtype = np.bool
 
     # The (0,0) coordinate now is eqivalent to (tilesize-overlap, tilesize-overlap)
     lst = [(k, j) for k in range(1, nrow - 1) for j in range(1, ncol - 1)]
-    tilemap = np.zeros(shape=(nrow, ncol), dtype=np.uint32)
-    ntiles = len(lst)  # == nrow * ncol
 
-    # TODO: add block read's and low-res whitespace mapping
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tPopulating tilemap'
-    print '\tCreated a {} row by {} col lattice over the image'.format(
-        nrow, ncol)
-    print '\tPulling out squares side length = {}'.format(
-        tile_top + 2 * overlap)
-    print '\tWriting into {} squares'.format(writesize)
-    print '\tStarting at row {} col {}'.format(
-        lst[0][0] * tile_top - overlap_top, lst[0][1] * tile_top - overlap_top)
+    ntiles = len(lst)  # == nrow * ncol
 
     written = 0
     for index, coords in enumerate(lst):
@@ -376,6 +377,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile'):
 
         # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
         [r, c] = coords
+
         name = '{}{:05d}.jpg'.format(prefix, index)
         tile = wsi.read_region(
             location=(c * tile_top - overlap_top, r * tile_top - overlap_top),
@@ -383,7 +385,8 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile'):
             size=(tile_top + 2 * overlap_top, tile_top + 2 * overlap_top))
         tile = np.array(tile)
 
-        if check_white(tile):
+        # New Apr 12 - update only pre-marked places
+        if check_white(tile) and tumor_located[r,c]:
             filename = os.path.join(writeto, name)
             write_tile(tile, filename, writesize, normalize=False)
             tilemap = update_map(tilemap, r, c, index)

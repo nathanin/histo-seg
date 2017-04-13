@@ -371,14 +371,14 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
 
 
 if __name__ == '__main__':
-    proj = '/home/nathan/histo-seg/pca/seg_0.8'
+    proj = '/home/nathan/histo-seg/pca/seg_0.8.1'
     svs = sys.argv[1]
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
 
     # The strategy for weighting is to have scales not explicitly
     # included in the training weighed less
-    scales = [384, 600, 656]
-    scale_weights = [2, 1, 1.5]  # TODO (nathan)
+    scales = [384, 412]
+    scale_weights = [1, 0.8]  # TODO (nathan)
 
     main(proj, svs, scales, scale_weights)
