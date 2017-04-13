@@ -427,7 +427,8 @@ def run_offsets(**kwargs):
 
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
-    scales = [384, 512, 600, 656]
+    # 384 + 128 = 512 = native training resolution
+    scales = [364, 384, 412]
 
     for s in scales:
         # Re-parse, I guess
@@ -446,19 +447,6 @@ def run_multiscale(**kwargs):
         run_inference(
             do_clean=False, do_parsing=False, do_assembly=False, **args)
 
-    #if not kwargs['tileonly']:
-    #    print ''
-    #    print '[Output from : {}]'.format(PrintFrame())
-    #    print '\tEntering assembly procedure for {}'.format(kwargs['filename'])
-    #    print_arg_set(**kwargs)
-    #    assemble_full_slide(scales=scales, **kwargs)
-
-    #    tail = os.path.basename(kwargs['filename'])
-    #    slide_name, ext = os.path.splitext(tail)
-    #    exproot = os.path.join(kwargs['writeto'], slide_name)
-    #    print 'Cleaning up in {}'.format(exproot)
-    #    cleanup_all(exproot)
-
     return 0
 
 
@@ -470,37 +458,6 @@ def run_multiscale(**kwargs):
 ##################################################################
 ##################################################################
 
-
-def run_devel():
-    filename = '/home/nathan/data/pca_wsi/swartwoods.svs'
-    # filename = '/home/nathan/data/pca_wsi/MaZ-001-a.svs'
-    writeto = '/home/nathan/histo-seg/pca'
-    tilesize = 512
-    writesize = 256  # this remains the dim expected by the network
-    overlap = 64
-    remove = True
-
-    weights = '/home/nathan/semantic-pca/weights/seg_0.5/norm_iter_125000.caffemodel'
-    model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
-    caffe_mode = 0
-    GPU_ID = 0
-    dev = False
-
-    sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
-
-    run_multiscale(
-        filename=filename,
-        writeto=writeto,
-        sub_dirs=sub_dirs,
-        tilesize=tilesize,
-        writesize=writesize,
-        weights=weights,
-        model_template=model_template,
-        remove_first=remove,
-        overlap=overlap,
-        dev=dev,
-        nclass=5,
-        whiteidx=3)
 
 
 def parse_options(**kwargs):

@@ -391,6 +391,15 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile'):
 
     return tilemap
 
+'''
+Tumor localization by some stupid metric
+whater works reasonably well.
+
+I don't care that you don't know how - just do it.
+'''
+# TODO !! Urgent
+def locate_tumor(wsi):
+    pass
 
 # TODO fix this logic. It's not good.
 # It breaks when the svs home folder exists
@@ -446,8 +455,6 @@ Method for overlapping:
     - Writesize remains 256; that's what the network wants.
     (change this by not being dum)
     '''
-
-
 def make_inference(filename,
                    writeto,
                    create,
@@ -463,7 +470,6 @@ def make_inference(filename,
     if use_existing:
         # TODO add in here more feedback for this tree of action.
         # TODO add here checks to see if the written tiles match the requested tiles.
-
         print '\tUsing existing tiles located {}'.format(tiledir)
         for d in created_dirs[1:]:
             print '\tCreated: {}'.format(d)
@@ -473,17 +479,12 @@ def make_inference(filename,
     for d in created_dirs:
         print '\tCreated: {}'.format(d)
 
+    # Get the slide pointer
     wsi = OpenSlide(filename)
     print '\tWorking with slide {}'.format(filename)
 
-    # Echo the settings:
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tSettings -------------'
-    print '\tTilesize: {}'.format(tilesize)
-    print '\tWrite size: {}'.format(writesize)
-    print '\tOverlap: {}'.format(overlap)
-    print '\t ------------- end/Settings\n'
+    # TODO (nathan) low-level tumor location
+    #tilemap = locate_tumor(wsi)
     tilemap = tile_wsi(
         wsi, tilesize, writesize, tiledir, overlap, prefix='tile')
 

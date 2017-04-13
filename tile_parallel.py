@@ -7,7 +7,7 @@ import seg_pipeline
 
 if __name__ == '__main__':
     # TODO fix these hard-coded paths to be passed in args
-    writeto = '/home/nathan/histo-seg/pca/seg_0.8'
+    writeto = '/home/nathan/histo-seg/pca/seg_0.8.1'
     sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
 
     # For multiscale, these aren't needed.
