@@ -428,7 +428,8 @@ def run_offsets(**kwargs):
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
     # 384 + 128 = 512 = native training resolution
-    scales = [364, 384, 412]
+    # 896 + 128 = 1024
+    scales = [812,896,956]
 
     for s in scales:
         # Re-parse, I guess

@@ -236,6 +236,7 @@ def aggregate_scales(imgs, kernel=None, weights=None):
 
 
 def decision(classimg, svs, svs_level, colors):
+    # The main thing this function does now is to load the rgb
     # Load up RGB image
     rgb = svs.read_region(
         (0, 0), level=svs_level, size=svs.level_dimensions[svs_level])
@@ -347,6 +348,8 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
 
     # Do the final classification
     classimg = np.dstack(classimg)
+    classimg = (255-classimg) # invert colors
+
     # Combine the high grade layers
     # Want to do it so that they add to each other. Do it after decision?
     #classimg[:,:,1] += classimg[:,:,4]
@@ -358,16 +361,19 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     cv2.imwrite(filename='dev_rgba.jpg', img=classimg[:,:,:4])
 
     # Make decisions and overlay discrete classes
-    classimg, colorimg, colorimg2 = decision(classimg, svs, svs_level, colors)
-    classfilename = 'class.png'
-    colorfilename = 'color.jpg'
+    #classimg, colorimg, colorimg2 = decision(classimg, svs, svs_level, colors)
+    _, _, colorimg2 = decision(classimg, svs, svs_level, colors)
+
+    #classfilename = 'class.png'
+    #colorfilename = 'color.jpg'
     color2filename = 'color2.jpg'
-    cv2.imwrite(filename=classfilename, img=classimg)
-    cv2.imwrite(filename=colorfilename, img=colorimg)
+    #cv2.imwrite(filename=classfilename, img=classimg)
+    #cv2.imwrite(filename=colorfilename, img=colorimg)
     cv2.imwrite(filename=color2filename, img=colorimg2)
 
     os.chdir(pwd)  # Change back
     # TODO (nathan) implement cleanup
+
 
 
 if __name__ == '__main__':
@@ -378,7 +384,7 @@ if __name__ == '__main__':
 
     # The strategy for weighting is to have scales not explicitly
     # included in the training weighed less
-    scales = [384, 412]
-    scale_weights = [1, 0.8]  # TODO (nathan)
+    scales = [364, 384, 412]
+    scale_weights = [0.5, 1, 0.5]  # TODO (nathan)
 
     main(proj, svs, scales, scale_weights)

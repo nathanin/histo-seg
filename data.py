@@ -324,7 +324,7 @@ def update_map(tilemap, r, c, value):
 
 
 def nrow_ncol(wsi, tilesize, overlap):
-    lvl20x, dim20 = pull_svs_stats(wsi)
+    lvl20x, dim20x = pull_svs_stats(wsi)
     resize_factor = int(wsi.level_downsamples[lvl20x])
 
     dims_top = wsi.level_dimensions[0]
@@ -338,6 +338,7 @@ def nrow_ncol(wsi, tilesize, overlap):
     return tile_top, overlap_top, nrow, ncol
 
 
+# New Apr 12, 2017
 def locate_tumor(wsi, tilesize, overlap):
     # Return a tilemap
     # Get some info about the slide
@@ -388,25 +389,13 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile',
         # New Apr 12 - update only pre-marked places
         if check_white(tile) and tumor_located[r,c]:
             filename = os.path.join(writeto, name)
-            write_tile(tile, filename, writesize, normalize=False)
+            write_tile(tile, filename, writesize, normalize=True)
             tilemap = update_map(tilemap, r, c, index)
             written += 1
 
     return tilemap
 
-'''
-Tumor localization by some stupid metric
-whater works reasonably well.
 
-I don't care that you don't know how - just do it.
-'''
-# TODO !! Urgent
-def locate_tumor(wsi):
-    pass
-
-# TODO fix this logic. It's not good.
-# It breaks when the svs home folder exists
-# add deeper checking for all the requested sub-ds
 def create_dirs_inference(filename, writeto, sub_dirs, remove=False):
     tail = os.path.basename(filename)
     slide_name, ex = os.path.splitext(tail)

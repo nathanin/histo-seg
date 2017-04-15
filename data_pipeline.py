@@ -94,7 +94,7 @@ def make_segmentation_training(src, anno, root, scales, multiplicity):
 
 if __name__ == "__main__":
     scales = [1024]
-    multiplicity = [11]
+    multiplicity = [35]
     dataset_root = sys.argv[1]
     #dataset_root = '/home/nathan/semantic-pca/data/seg_0.9'
 
