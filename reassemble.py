@@ -15,6 +15,8 @@ sys.path.insert(0, histoseg_code)
 import data
 import generate_color
 
+import time
+
 # Set defaults
 result_types = ['prob0', 'prob1', 'prob2', 'prob3', 'prob4']
 
@@ -164,6 +166,8 @@ def place_padding(img, target, value=0):
 
 
 def rebuild(settings, dir_set, r):
+
+    start_time = time.time()
     # unpack settings
     dirs = dir_set[r]
 
@@ -205,11 +209,16 @@ def rebuild(settings, dir_set, r):
             region = region[:,:,0]
         scaleimgs.append(region)
 
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME reassemble.rebuild time: {}'.format(elapsed)
+
     return scaleimgs
 
 
 
 def aggregate_scales(imgs, kernel=None, weights=None):
+    start_time = time.time()
     #if kernel is None:
     combo = [img for img in imgs]
 
@@ -228,11 +237,19 @@ def aggregate_scales(imgs, kernel=None, weights=None):
     combo = np.average(combo, axis=2, weights=weights)
 
     ## Smooth again?
+
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME reassemble.aggregate_scales time: {}'.format(elapsed)
+
     if kernel is None:
         return combo
     else:
         combo = cv2.morphologyEx(combo, cv2.MORPH_CLOSE, kernel)
         return cv2.morphologyEx(combo, cv2.MORPH_OPEN, kernel)
+
+
+
 
 
 def decision(classimg, svs, svs_level, colors):
@@ -288,6 +305,8 @@ def impose_colors(label, colors):
 
 
 def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
+
+    start_time = time.time()
     # Set some constant
     pwd = os.getcwd()
     #svs = '{}.svs'.format(imageroot)
@@ -348,7 +367,7 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
 
     # Do the final classification
     classimg = np.dstack(classimg)
-    classimg = (255-classimg) # invert colors
+    #classimg = (255-classimg) # invert colors
 
     # Combine the high grade layers
     # Want to do it so that they add to each other. Do it after decision?
@@ -375,16 +394,24 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     # TODO (nathan) implement cleanup
 
 
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME reassemble.main file: {} time: {}'.format(
+        workingdir, elapsed)
+
+
 
 if __name__ == '__main__':
-    proj = '/home/nathan/histo-seg/pca/seg_0.8.1'
+    proj = '/home/nathan/histo-seg/pca/seg_0.8.1024_resume'
     svs = sys.argv[1]
+    #svs = '/home/nathan/data/pca_wsi/1305400.svs'
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
 
     # The strategy for weighting is to have scales not explicitly
     # included in the training weighed less
-    scales = [364, 384, 412]
-    scale_weights = [0.5, 1, 0.5]  # TODO (nathan)
+    #scales = [812, 896, 956]
+    scales = [364, 384]
+    scale_weights = [0.5, 1]  # TODO (nathan)
 
     main(proj, svs, scales, scale_weights)

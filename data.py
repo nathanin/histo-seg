@@ -23,6 +23,7 @@ import os
 import shutil
 import inspect
 import glob
+import time
 '''
 ```````````````` DEBUGGING FUNCTOIN ``````````````````
 '''
@@ -351,19 +352,40 @@ def locate_tumor(wsi, tilesize, overlap):
 
 
 
+'''
+    tile_wsi write out tiles and save a map
+    # Functionized. 4-12-17. NI
+    # Debugged 4-17-17
+    # Added timing 4-17-17
+
+    1. If tilemap is given, use it to determine valid locations
+    2. For each location, decide if this location is valid based
+        on tumor_located
+    3. If tumor_located == True,
+        check for white space
+    4. If not white space,
+        write out tile and update tilemap
+
+'''
+
 def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile',
              tilemap=None):
-    # Functionized. 4-17. NI
+    start_time = time.time()
+
+    # Do some conversions based on the presumed tile size,
+    # translate it to the top level where we always take data from.
     tile_top, overlap_top, nrow, ncol = nrow_ncol(wsi, tilesize, overlap)
 
     # There's probably some clever way to write this
     if tilemap:
         tumor_located = tilemap
+        # Reset tilemap
         tilemap = np.zeros(shape=(nrow, ncol), dtype=np.uint32)
     else:
         tilemap = np.zeros(shape=(nrow, ncol), dtype=np.uint32)
-        tumor_located = tilemap + 1
-        tumor_located.dtype = np.bool
+        tumor_located = np.ones(shape=(nrow, ncol), dtype=np.bool)
+        #tumor_located = tilemap + 1
+        #tumor_located.dtype = np.bool
 
     # The (0,0) coordinate now is eqivalent to (tilesize-overlap, tilesize-overlap)
     lst = [(k, j) for k in range(1, nrow - 1) for j in range(1, ncol - 1)]
@@ -372,28 +394,41 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile',
 
     written = 0
     for index, coords in enumerate(lst):
+        # Incrementally print some feedback
         if index % 100 == 0:
             print '\t{:05d} / {:05d} ({} written so far)'.format(
                 index, ntiles, written)
 
         # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
         [r, c] = coords
+        # First check
+        # For new tilemaps, this is always True
+        # Meant to minimze calls to read_region
+        if tumor_located[r,c]:
+            name = '{}{:05d}.jpg'.format(prefix, index)
+            tile = wsi.read_region(
+                location=(c * tile_top - overlap_top, r * tile_top - overlap_top),
+                level=0,
+                size=(tile_top + 2 * overlap_top, tile_top + 2 * overlap_top))
+            tile = np.array(tile)
 
-        name = '{}{:05d}.jpg'.format(prefix, index)
-        tile = wsi.read_region(
-            location=(c * tile_top - overlap_top, r * tile_top - overlap_top),
-            level=0,
-            size=(tile_top + 2 * overlap_top, tile_top + 2 * overlap_top))
-        tile = np.array(tile)
+            # Second check for white space
+            if check_white(tile):
+                filename = os.path.join(writeto, name)
+                write_tile(tile, filename, writesize, normalize=True)
+                tilemap = update_map(tilemap, r, c, index)
 
-        # New Apr 12 - update only pre-marked places
-        if check_white(tile) and tumor_located[r,c]:
-            filename = os.path.join(writeto, name)
-            write_tile(tile, filename, writesize, normalize=True)
-            tilemap = update_map(tilemap, r, c, index)
-            written += 1
+                # Increment our dumb counter
+                written += 1
+
+    # Print out timing info
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME data.tile_wsi tilesize: {} time: {}'.format(
+        tilesize, elapsed)
 
     return tilemap
+
 
 
 def create_dirs_inference(filename, writeto, sub_dirs, remove=False):
@@ -440,13 +475,6 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove=False):
 
 
 # New: adding overlap option
-'''
-Method for overlapping:
-    - Create lattice without considering overlap
-    - Add overlap to tilesize in both dims
-    - Writesize remains 256; that's what the network wants.
-    (change this by not being dum)
-    '''
 def make_inference(filename,
                    writeto,
                    create,
@@ -455,6 +483,7 @@ def make_inference(filename,
                    overlap=0,
                    remove_first=False):
 
+    start_time = time.time()
     exp_home, created_dirs, use_existing = create_dirs_inference(
         filename, writeto, sub_dirs=create, remove=remove_first)
     tiledir = created_dirs[0]
@@ -485,6 +514,10 @@ def make_inference(filename,
     np.save(file=map_file, arr=tilemap)
 
     wsi.close()
+
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME data.make_inference time: {}'.format(elapsed)
 
     #returns created_dirs after the first, which should always be 'tile'
     return exp_home, created_dirs
@@ -647,7 +680,9 @@ def build_region(region,
                  exactly=None,
                  pad=(0, 0)):
 
+    start_time = time.time()
     x, y, c, r = region
+
 
     #print ''
     #print '[Output from : {}]'.format(PrintFrame())
@@ -686,6 +721,10 @@ def build_region(region,
         # ??????
         img = cv2.resize(img, dsize=exactly[::-1])
 
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME data.build_region time: {}'.format(elapsed)
+
     return img
 
 
@@ -699,7 +738,6 @@ def calc_tile_cutoff(filename, tilesize):
     return n_tiles / 20
 
 
-# TODO this function isn't very good. the place to generalize isn't really obvious to me.
 def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff,
              tilesize):
 
@@ -736,3 +774,37 @@ def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff,
             reg_name = os.path.join(exp_home, reg_name)
             print '\tSaving region to {}'.format(reg_name)
             cv2.imwrite(reg_name, img)
+
+
+if __name__ == '__main__':
+    import seg_pipeline  # This actually iports this function. idk.
+
+    writeto = '/home/nathan/histo-seg/pca/seg_0.8.1024'
+    sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+
+    # For multiscale, these aren't needed.
+    weights = 'dummy'
+    model_template = 'dummy'
+    remove = True
+    overlap = 64
+    tilesize = 512
+    writesize = 256
+
+    filename = '/home/nathan/data/pca_wsi/1305400.svs'
+
+    print 'Entering tile procedure...'
+    seg_pipeline.run_multiscale(
+        filename=filename,
+        writeto=writeto,
+        sub_dirs=sub_dirs,
+        tilesize=tilesize,
+        writesize=writesize,
+        weights=weights,
+        model_template=model_template,
+        remove_first=remove,
+        overlap=overlap,
+        nclass=5,
+        whiteidx=3,
+        tileonly=True)
+
+

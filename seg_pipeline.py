@@ -16,6 +16,7 @@ import cv2
 from openslide import OpenSlide
 import numpy as np
 
+import time
 
 # Define inspection code that spits out the line it's called from (as str)
 def PrintFrame():
@@ -39,15 +40,15 @@ def PrintFrame():
 
 def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID, dev):
     # Echo inputs
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tRunning histoseg.process: '
-    print '\tSource: {}'.format(expdirs[0])
-    print '\tDestination: {}'.format(expdirs[1:])
-    print '\tModel template: {}'.format(model_template)
-    print '\tWeights: {}'.format(weights)
-    print '\tMode: {}'.format(mode)
-    print '\tRunning on GPU: {}'.format(GPU_ID)
+    #print ''
+    #print '[Output from : {}]'.format(PrintFrame())
+    #print '\tRunning histoseg.process: '
+    #print '\tSource: {}'.format(expdirs[0])
+    #print '\tDestination: {}'.format(expdirs[1:])
+    #print '\tModel template: {}'.format(model_template)
+    #print '\tWeights: {}'.format(weights)
+    #print '\tMode: {}'.format(mode)
+    #print '\tRunning on GPU: {}'.format(GPU_ID)
 
     if dev:
         print '\nRUNNING DEVELOPMENT MODE'
@@ -64,21 +65,21 @@ def make_data_inference(filename,
                         writesize,
                         overlap=0,
                         remove_first=False):
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tRunning data creation for inference:'
-    print '\tFile: {}'.format(filename)
-    print '\tDestination: {}'.format(writeto)
+    #print ''
+    #print '[Output from : {}]'.format(PrintFrame())
+    #print '\tRunning data creation for inference:'
+    #print '\tFile: {}'.format(filename)
+    #print '\tDestination: {}'.format(writeto)
     return data.make_inference(filename, writeto, create, tilesize, writesize,
                                overlap, remove_first)
 
 
 def assemble_tiles(result_root, expdirs, writesize, overlap, overlay, filename,
                    tilesize):
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print '\tAssembling tiles:'
-    print '\tSaving result to : {}'.format(result_root)
+    #print ''
+    #print '[Output from : {}]'.format(PrintFrame())
+    #print '\tAssembling tiles:'
+    #print '\tSaving result to : {}'.format(result_root)
     area_cutoff = data.calc_tile_cutoff(filename, tilesize)
     data.assemble(result_root, expdirs, writesize, overlap, overlay,
                   area_cutoff, tilesize)
@@ -99,6 +100,7 @@ def get_downsample_overlap(tilesize, writesize, overlap):
 
 
 def run_inference(do_clean=True, do_parsing=True, do_assembly=True, **kwargs):
+    start_time = time.time()
     if do_parsing:
         args = parse_options(**kwargs)
     else:
@@ -128,6 +130,12 @@ def run_inference(do_clean=True, do_parsing=True, do_assembly=True, **kwargs):
 
     if do_clean:
         cleanup(expdirs)
+
+
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME seg_pipeline.run_inference tilesize {} time: {}'.format(
+        args['tilesize'], elapsed)
 
 
 def print_arg_set(**kwargs):
@@ -389,52 +397,19 @@ def cleanup_all(exproot):
     _ = [shutil.rmtree(d) for d in dlist if os.path.isdir(d)]
 
 
-def run_offsets(**kwargs):
-    # offsets should really be some fraction of tilesize
-    offsets = [0, 128]
-
-    # Classification loop
-    for offset in offsets:
-        # Re-parse, I guess
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())
-
-        args = parse_options(**kwargs)
-        # Change some things
-        args['offset'] = offset
-        args['sub_dirs'] = [
-            '{}_{}'.format(subdir, args['offset'])
-            for subdir in args['sub_dirs']
-        ]
-        print_arg_set(**args)
-        run_inference(
-            do_clean=False, do_parsing=False, do_assembly=False, **args)
-
-    # Assembly function
-    if not kwargs['tileonly']:
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())
-        print '\tEntering assembly procedure for {}'.format(kwargs['filename'])
-        print_arg_set(**kwargs)
-        assemble_full_slide(scales=scales, **kwargs)
-
-        tail = os.path.basename(kwargs['filename'])
-        slide_name, ext = os.path.splitext(tail)
-        exproot = os.path.join(kwargs['writeto'], slide_name)
-        print 'Cleaning up in {}'.format(exproot)
-        cleanup_all(exproot)
-
-
 def run_multiscale(**kwargs):
     # scales = [556, 512, 496, 458]
     # 384 + 128 = 512 = native training resolution
     # 896 + 128 = 1024
-    scales = [812,896,956]
+
+    start_time = time.time()
+    #scales = [812,896,956]
+    scales = [364, 384]
 
     for s in scales:
         # Re-parse, I guess
-        print ''
-        print '[Output from : {}]'.format(PrintFrame())
+        #print ''
+        #print '[Output from : {}]'.format(PrintFrame())
 
         args = parse_options(**kwargs)
         # Overwrite some settings
@@ -448,6 +423,9 @@ def run_multiscale(**kwargs):
         run_inference(
             do_clean=False, do_parsing=False, do_assembly=False, **args)
 
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME seg_pipeline.run_multiscale {}\n'.format(elapsed)
     return 0
 
 
@@ -502,8 +480,46 @@ def parse_options(**kwargs):
 
 
 if __name__ == '__main__':
-    run_devel()
-    '''
+    # Define project variables:
+    imgs_src = '/home/nathan/data/pca_wsi'
+    search = os.path.join(imgs_src, '*.svs')
+    filenames = sorted(glob.glob(search))
+
+    writeto = '/home/nathan/histo-seg/pca/seg_0.8.1024'
+    sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+
+    weights = '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel'
+    model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
+
+    remove = False
+    overlap = 64
+    tilesize = 512
+    writesize = 256
+
+    filename = '/home/nathan/data/pca_wsi/1305400.svs'
+
+    run_multiscale(
+        filename=filename,
+        writeto=writeto,
+        sub_dirs=sub_dirs,
+        tilesize=tilesize,
+        writesize=writesize,
+        weights=weights,
+        model_template=model_template,
+        remove_first=remove,
+        overlap=overlap,
+        nclass=5,
+        whiteidx=3,
+        tileonly=False)
+
+
+
+
+
+
+
+
+'''
 
 // Notes
 
