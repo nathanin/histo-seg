@@ -62,6 +62,11 @@ metrics_list = [
     'BNJaccard',
     'STJaccard',
     'G5Jaccard',
+    'G3Accuracy',
+    'G4Accuracy',
+    'BNAccuracy',
+    'STAccuracy',
+    'G5Accuracy',
     'G3f1',
     'G4f1',
     'BNf1',
@@ -71,29 +76,85 @@ metrics_list = [
     'G4mattCoef',
     'BNmattCoef',
     'STmattCoef',
-    'G5mattCoef'
+    'G5mattCoef',
+    'G3precision',
+    'G4precision',
+    'BNprecision',
+    'STprecision',
+    'G5precision',
+    'EPAccuracy',
+    'EPf1',
+    'EPprecision',
+    'PCaAccuracy',
+    'PCaf1',
+    'PCaprecision'
 ]
+
+# Define two special tests:
+def epit(mask):
+    m0 = mask == 0
+    m1 = mask == 1
+    m2 = mask == 2
+    m4 = mask == 4
+
+    m0.dtype = np.uint8
+    m1.dtype = np.uint8
+    m2.dtype = np.uint8
+    m4.dtype = np.uint8
+
+    # Return the union
+    m = m0 + m1 + m2 + m4
+    return m>0
+
+def canc(mask):
+    m0 = mask == 0
+    m1 = mask == 1
+    m4 = mask == 4
+
+    m0.dtype = np.uint8
+    m1.dtype = np.uint8
+    m4.dtype = np.uint8
+
+    m = m0 + m1 + m4
+    return m>0
+
 
 # Dictionary of lambda functions... hope this works
 tests_fn = {
-    'OverallJaccard':  lambda gt,test: jaccard_similarity_score(gt,test),
-    'OverallAccuracy': lambda gt,test: accuracy_score(gt,test),
-    'Kappa':           lambda gt,test: cohen_kappa_score(gt,test),
-    'G3Jaccard':       lambda gt,test: jaccard_similarity_score(gt==0,test==0),
-    'G4Jaccard':       lambda gt,test: jaccard_similarity_score(gt==1,test==1),
-    'BNJaccard':       lambda gt,test: jaccard_similarity_score(gt==2,test==2),
-    'STJaccard':       lambda gt,test: jaccard_similarity_score(gt==3,test==3),
-    'G5Jaccard':       lambda gt,test: jaccard_similarity_score(gt==4,test==4),
-    'G3f1':            lambda gt,test: f1_score(gt==0,test==0),
-    'G4f1':            lambda gt,test: f1_score(gt==1,test==1),
-    'BNf1':            lambda gt,test: f1_score(gt==2,test==2),
-    'STf1':            lambda gt,test: f1_score(gt==3,test==3),
-    'G5f1':            lambda gt,test: f1_score(gt==4,test==4),
-    'G3mattCoef':      lambda gt,test: matthews_corrcoef(gt==0,test==0),
-    'G4mattCoef':      lambda gt,test: matthews_corrcoef(gt==1,test==1),
-    'BNmattCoef':      lambda gt,test: matthews_corrcoef(gt==2,test==2),
-    'STmattCoef':      lambda gt,test: matthews_corrcoef(gt==3,test==3),
-    'G5mattCoef':      lambda gt,test: matthews_corrcoef(gt==4,test==4)
+    'OverallJaccard': lambda gt,test: jaccard_similarity_score(gt,test),
+    'OverallAccuracy':lambda gt,test: accuracy_score(gt,test),
+    'Kappa':          lambda gt,test: cohen_kappa_score(gt,test),
+    'G3Jaccard':      lambda gt,test: jaccard_similarity_score(gt==0,test==0),
+    'G4Jaccard':      lambda gt,test: jaccard_similarity_score(gt==1,test==1),
+    'BNJaccard':      lambda gt,test: jaccard_similarity_score(gt==2,test==2),
+    'STJaccard':      lambda gt,test: jaccard_similarity_score(gt==3,test==3),
+    'G5Jaccard':      lambda gt,test: jaccard_similarity_score(gt==4,test==4),
+    'G3Accuracy':      lambda gt,test: accuracy_score(gt==0,test==0),
+    'G4Accuracy':      lambda gt,test: accuracy_score(gt==1,test==1),
+    'BNAccuracy':      lambda gt,test: accuracy_score(gt==2,test==2),
+    'STAccuracy':      lambda gt,test: accuracy_score(gt==3,test==3),
+    'G5Accuracy':      lambda gt,test: accuracy_score(gt==4,test==4),
+    'G3f1':           lambda gt,test: f1_score(gt==0,test==0),
+    'G4f1':           lambda gt,test: f1_score(gt==1,test==1),
+    'BNf1':           lambda gt,test: f1_score(gt==2,test==2),
+    'STf1':           lambda gt,test: f1_score(gt==3,test==3),
+    'G5f1':           lambda gt,test: f1_score(gt==4,test==4),
+    'G3mattCoef':     lambda gt,test: matthews_corrcoef(gt==0,test==0),
+    'G4mattCoef':     lambda gt,test: matthews_corrcoef(gt==1,test==1),
+    'BNmattCoef':     lambda gt,test: matthews_corrcoef(gt==2,test==2),
+    'STmattCoef':     lambda gt,test: matthews_corrcoef(gt==3,test==3),
+    'G5mattCoef':     lambda gt,test: matthews_corrcoef(gt==4,test==4),
+    'G3precision':     lambda gt,test: precision_score(gt==0,test==0),
+    'G4precision':     lambda gt,test: precision_score(gt==1,test==1),
+    'BNprecision':     lambda gt,test: precision_score(gt==2,test==2),
+    'STprecision':     lambda gt,test: precision_score(gt==3,test==3),
+    'G5precision':     lambda gt,test: precision_score(gt==4,test==4),
+    'EPAccuracy':     lambda gt,test: accuracy_score(epit(gt),epit(test)),
+    'EPf1':           lambda gt,test: f1_score(epit(gt),epit(test)),
+    'EPprecision':           lambda gt,test: precision_score(epit(gt),epit(test)),
+    'PCaAccuracy':    lambda gt,test: accuracy_score(canc(gt),canc(test)),
+    'PCaf1':          lambda gt,test: f1_score(canc(gt),canc(test)),
+    'PCaprecision':          lambda gt,test: precision_score(canc(gt),canc(test))
 }
 
 
@@ -143,7 +204,7 @@ def load_images(gt_pth, test_pth):
     return gt_img, test_img
 
 
-def eval_mask_pair(gt_img, test_img, verbose = False):
+def eval_mask_pair(gt_img, test_img, verbose = True):
     metrics = {key:0 for key in metrics_list}
 
     # For class-wise scores, only evaluate if the class
@@ -152,8 +213,12 @@ def eval_mask_pair(gt_img, test_img, verbose = False):
     in_gt = [code_class[key] for key in gt_u]
     for key in metrics.iterkeys():
         if 'Overall' in key or key == 'Kappa':
+            # Always do overall , and the kappa score
             metrics[key] = tests_fn[key](gt_img, test_img)
-            continue;
+        elif 'PCa' in key and any([u in ['G3','G4','G5'] for u in in_gt]):
+            metrics[key] = tests_fn[key](gt_img, test_img)
+        elif 'EP' in key and any([u in ['G3','G4','G5','BN'] for u in in_gt]):
+            metrics[key] = tests_fn[key](gt_img, test_img)
         elif any([u in key for u in in_gt]):
             metrics[key] = tests_fn[key](gt_img, test_img)
         else:
@@ -240,6 +305,9 @@ if __name__ == '__main__':
     gt_dir = sys.argv[1]
     test_dir = sys.argv[2]
     test_ext = sys.argv[3]
+    if len(sys.argv) == 5:
+        print "using 4th arg as subset pct"
+        subset = np.float64(sys.argv[4])
 
     main(gt_dir, test_dir, test_ext=test_ext, subset=subset)
 
