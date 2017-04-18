@@ -38,104 +38,100 @@ def PrintFrame():
 ##################################################################
 
 
-def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID, dev):
-    # Echo inputs
-    #print ''
-    #print '[Output from : {}]'.format(PrintFrame())
-    #print '\tRunning histoseg.process: '
-    #print '\tSource: {}'.format(expdirs[0])
-    #print '\tDestination: {}'.format(expdirs[1:])
-    #print '\tModel template: {}'.format(model_template)
-    #print '\tWeights: {}'.format(weights)
-    #print '\tMode: {}'.format(mode)
-    #print '\tRunning on GPU: {}'.format(GPU_ID)
-
-    if dev:
-        print '\nRUNNING DEVELOPMENT MODE'
-        histoseg.process_dev(expdirs)
-    else:
-        histoseg.process(exphome, expdirs, model_template, weights, mode,
-                         GPU_ID)
+#def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID, dev):
+#    # Wrapper for histoseg.process
+#    histoseg.process(exphome, expdirs, model_template, weights, mode,
+#                     GPU_ID)
 
 
-def make_data_inference(filename,
-                        writeto,
-                        create,
-                        tilesize,
-                        writesize,
-                        overlap=0,
-                        remove_first=False):
-    #print ''
-    #print '[Output from : {}]'.format(PrintFrame())
-    #print '\tRunning data creation for inference:'
-    #print '\tFile: {}'.format(filename)
-    #print '\tDestination: {}'.format(writeto)
-    return data.make_inference(filename, writeto, create, tilesize, writesize,
-                               overlap, remove_first)
+#def make_data_inference(filename,
+#                        writeto,
+#                        create,
+#                        tilesize,
+#                        writesize,
+#                        overlap=0,
+#                        remove_first=False):
+#    #print ''
+#    #print '[Output from : {}]'.format(PrintFrame())
+#    #print '\tRunning data creation for inference:'
+#    #print '\tFile: {}'.format(filename)
+#    #print '\tDestination: {}'.format(writeto)
+#    return data.make_inference(filename, writeto, create, tilesize, writesize,
+#                               overlap, remove_first)
 
 
-def assemble_tiles(result_root, expdirs, writesize, overlap, overlay, filename,
-                   tilesize):
-    #print ''
-    #print '[Output from : {}]'.format(PrintFrame())
-    #print '\tAssembling tiles:'
-    #print '\tSaving result to : {}'.format(result_root)
-    area_cutoff = data.calc_tile_cutoff(filename, tilesize)
-    data.assemble(result_root, expdirs, writesize, overlap, overlay,
-                  area_cutoff, tilesize)
+#def assemble_tiles(result_root, expdirs, writesize, overlap, overlay, filename,
+#                   tilesize):
+#    #print ''
+#    #print '[Output from : {}]'.format(PrintFrame())
+#    #print '\tAssembling tiles:'
+#    #print '\tSaving result to : {}'.format(result_root)
+#    area_cutoff = data.calc_tile_cutoff(filename, tilesize)
+#    data.assemble(result_root, expdirs, writesize, overlap, overlay,
+#                  area_cutoff, tilesize)
 
 
-def cleanup(dirs):
-    for d in dirs:
-        if d != '/':
-            print 'Cleaning {}'.format(d)
-            shutil.rmtree(d)
+#def cleanup(dirs):
+#    for d in dirs:
+#        if d != '/':
+#            print 'Cleaning {}'.format(d)
+#            shutil.rmtree(d)
 
 
-def get_downsample_overlap(tilesize, writesize, overlap):
-    ts = tilesize + 2 * overlap
-    factor = ts / float(writesize)
+#def get_downsample_overlap(tilesize, writesize, overlap):
+#    ts = tilesize + 2 * overlap
+#    factor = ts / float(writesize)
+#
+#    return int(overlap / factor)
 
-    return int(overlap / factor)
 
-
-def run_inference(do_clean=True, do_parsing=True, do_assembly=True, **kwargs):
+# Inference for a single scale
+# Records outputs to the Tiles Database
+def run_inference(do_clean=True, do_parsing=True, **kwargs):
     start_time = time.time()
     if do_parsing:
         args = parse_options(**kwargs)
     else:
         args = kwargs
 
-    print ''
-    print '[Output from : {}]'.format(PrintFrame())
-    print_arg_set(**kwargs)
-    exproot, expdirs = make_data_inference(
+    exproot, expdirs = data.make_inference(
         args['filename'], args['writeto'], args['sub_dirs'], args['tilesize'],
         args['writesize'], args['overlap'], args['remove_first'])
 
+    # Check what mode to work in
     if args['tileonly']:
         print '\nDone processing {}; Returning\n'.format(args['filename'])
+        end_time = time.time()
+        elapsed = (end_time - start_time)
+        print '\nTIME seg_pipeline.run_inference TILEONLY tilesize {} time: {}'.format(
+            args['tilesize'], elapsed)
+
         return
 
     # Main function here:
-    run_histoseg(exproot, expdirs, args['weights'], args['model_template'],
-                 args['caffe_mode'], args['GPU_ID'], args['dev'])
-
-    if do_assembly:
-        downsample_overlap = get_downsample_overlap(
-            args['tilesize'], args['writesize'], args['overlap'])
-
-        assemble_tiles(exproot, expdirs, args['writesize'], downsample_overlap,
-                       args['overlay'], args['filename'], args['tilesize'])
-
-    if do_clean:
-        cleanup(expdirs)
-
+    histoseg.process(exproot, expdirs, args['weights'], args['model_template'],
+                     args['caffe_mode'], args['GPU_ID'], args['dev'])
 
     end_time = time.time()
     elapsed = (end_time - start_time)
-    print '\nTIME seg_pipeline.run_inference tilesize {} time: {}'.format(
+    print '\nTIME seg_pipeline.run_inference INFERENCE tilesize {} time: {}'.format(
         args['tilesize'], elapsed)
+    return
+
+    #if do_assembly:
+    #    downsample_overlap = get_downsample_overlap(
+    #        args['tilesize'], args['writesize'], args['overlap'])
+
+    #    assemble_tiles(exproot, expdirs, args['writesize'], downsample_overlap,
+    #                   args['overlay'], args['filename'], args['tilesize'])
+
+    #if do_clean:
+    #    cleanup(expdirs)
+
+    #end_time = time.time()
+    #elapsed = (end_time - start_time)
+    #print '\nTIME seg_pipeline.run_inference tilesize {} time: {}'.format(
+    #    args['tilesize'], elapsed)
 
 
 def print_arg_set(**kwargs):
@@ -408,9 +404,6 @@ def run_multiscale(**kwargs):
 
     for s in scales:
         # Re-parse, I guess
-        #print ''
-        #print '[Output from : {}]'.format(PrintFrame())
-
         args = parse_options(**kwargs)
         # Overwrite some settings
         args['tilesize'] = s  # Override tilesize
@@ -421,7 +414,7 @@ def run_multiscale(**kwargs):
         # args['remove_first'] = True
         print_arg_set(**args)
         run_inference(
-            do_clean=False, do_parsing=False, do_assembly=False, **args)
+            do_clean=False, do_parsing=False, **args)
 
     end_time = time.time()
     elapsed = (end_time - start_time)
@@ -438,10 +431,8 @@ def run_multiscale(**kwargs):
 ##################################################################
 
 
-
 def parse_options(**kwargs):
     print '\tParsing arguments: '
-
     defaults = {
         'filename': None,
         'writeto': None,
@@ -470,7 +461,7 @@ def parse_options(**kwargs):
         if d in kwargs:
             pass
         else:
-            print '\t\tUsing default value for {}'.format(d)
+            #print '\t\tUsing default value for {}'.format(d)
             kwargs[d] = defaults[d]
 
     if None in kwargs.itervalues():

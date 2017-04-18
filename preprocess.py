@@ -82,6 +82,7 @@ def white_mask(img, **kwargs):
     # white is a np.bool ndarray
     return white
 
+
 def main():
 
 
