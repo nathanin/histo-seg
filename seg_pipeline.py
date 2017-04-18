@@ -38,10 +38,10 @@ def PrintFrame():
 ##################################################################
 
 
-#def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID, dev):
-#    # Wrapper for histoseg.process
-#    histoseg.process(exphome, expdirs, model_template, weights, mode,
-#                     GPU_ID)
+def run_histoseg(exphome, expdirs, weights, model_template, mode, GPU_ID, reportfile):
+    # Wrapper for histoseg.process
+    histoseg.process(exphome, expdirs, model_template, weights, mode,
+                     GPU_ID, reportfile)
 
 
 #def make_data_inference(filename,
@@ -94,9 +94,11 @@ def run_inference(do_clean=True, do_parsing=True, **kwargs):
     else:
         args = kwargs
 
-    exproot, expdirs = data.make_inference(
+    exproot, expdirs, reportfile = data.make_inference(
         args['filename'], args['writeto'], args['sub_dirs'], args['tilesize'],
         args['writesize'], args['overlap'], args['remove_first'])
+
+    repf = open(reportfile, 'a')
 
     # Check what mode to work in
     if args['tileonly']:
@@ -106,16 +108,21 @@ def run_inference(do_clean=True, do_parsing=True, **kwargs):
         print '\nTIME seg_pipeline.run_inference TILEONLY tilesize {} time: {}'.format(
             args['tilesize'], elapsed)
 
+        #repf.write('TIME ALLTILES {}\n'.format(elapsed))
+        repf.close()
         return
 
     # Main function here:
-    histoseg.process(exproot, expdirs, args['weights'], args['model_template'],
-                     args['caffe_mode'], args['GPU_ID'], args['dev'])
+    repf.write('ENTERING INFERENCE\n')
+    repf.close()
+    histoseg.process(exproot, expdirs, args['model_template'],args['weights'],
+                     args['caffe_mode'], args['GPU_ID'], reportfile)
 
     end_time = time.time()
     elapsed = (end_time - start_time)
     print '\nTIME seg_pipeline.run_inference INFERENCE tilesize {} time: {}'.format(
         args['tilesize'], elapsed)
+
     return
 
     #if do_assembly:
@@ -399,20 +406,19 @@ def run_multiscale(**kwargs):
     # 896 + 128 = 1024
 
     start_time = time.time()
-    #scales = [812,896,956]
-    scales = [364, 384]
+    scales = [2100, 3000]
+    #scales = [364, 384]
 
     for s in scales:
         # Re-parse, I guess
         args = parse_options(**kwargs)
+
         # Overwrite some settings
         args['tilesize'] = s  # Override tilesize
         args['sub_dirs'] = [
             '{}_{}'.format(subdir, args['tilesize'])
             for subdir in args['sub_dirs']
         ]
-        # args['remove_first'] = True
-        print_arg_set(**args)
         run_inference(
             do_clean=False, do_parsing=False, **args)
 
@@ -432,7 +438,7 @@ def run_multiscale(**kwargs):
 
 
 def parse_options(**kwargs):
-    print '\tParsing arguments: '
+    #print '\tParsing arguments: '
     defaults = {
         'filename': None,
         'writeto': None,
@@ -447,14 +453,9 @@ def parse_options(**kwargs):
         'GPU_ID': 0,
         'overlay': True,
         'tileonly': False,
-        'dev': False,
         'nclass': 5,
         'whiteidx': 0
     }
-
-    for arg in kwargs:
-        print '\t\t{} : {}'.format(arg, kwargs[arg])
-        #passed_in[arg] = kwargs[arg]
 
     # Check what is defined, and assign defaults:
     for d in defaults:
@@ -470,38 +471,7 @@ def parse_options(**kwargs):
     return kwargs
 
 
-if __name__ == '__main__':
-    # Define project variables:
-    imgs_src = '/home/nathan/data/pca_wsi'
-    search = os.path.join(imgs_src, '*.svs')
-    filenames = sorted(glob.glob(search))
 
-    writeto = '/home/nathan/histo-seg/pca/seg_0.8.1024'
-    sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
-
-    weights = '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel'
-    model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
-
-    remove = False
-    overlap = 64
-    tilesize = 512
-    writesize = 256
-
-    filename = '/home/nathan/data/pca_wsi/1305400.svs'
-
-    run_multiscale(
-        filename=filename,
-        writeto=writeto,
-        sub_dirs=sub_dirs,
-        tilesize=tilesize,
-        writesize=writesize,
-        weights=weights,
-        model_template=model_template,
-        remove_first=remove,
-        overlap=overlap,
-        nclass=5,
-        whiteidx=3,
-        tileonly=False)
 
 
 

@@ -250,25 +250,27 @@ def aggregate_scales(imgs, kernel=None, weights=None):
 
 
 
-
-
 def decision(classimg, svs, svs_level, colors):
     # The main thing this function does now is to load the rgb
     # Load up RGB image
     rgb = svs.read_region(
         (0, 0), level=svs_level, size=svs.level_dimensions[svs_level])
-    rgb = np.array(rgb)[:, :, :3]
-    rgb = rgb[:, :, (2, 1, 0)]
+    rgb = np.array(rgb)
+    rgb = cv2.cvtColor(rgb, cv2.COLOR_RGBA2RGB)
+    #rgb = np.array(rgb)[:, :, :3]
+    rgb = rgb[:, :, (2, 1, 0)]  # ???
+
+    #TODO (nathan) only if the size is larger than some constant
+    # -- Also have to change it somewhere else, idk where
     rgb = cv2.resize(rgb, dsize=(0,0), fx=0.5, fy=0.5)
 
-    # TODO (nathan) Apply some linear weighting before the argmax
     labelmask = np.argmax(classimg, axis=2)
 
     # Reassign Grade 5 to Grade 4. Re-label "high grade"
     labelmask[labelmask == 4] = 1
 
     # Convert lable matrix to solid RGB colors
-    labelmask = impose_colors(labelmask, colors)
+    #labelmask = impose_colors(labelmask, colors)
 
     # Check assertion that the images be the same shape.
     # at most, off by 1 px rounding error:
@@ -276,13 +278,11 @@ def decision(classimg, svs, svs_level, colors):
         tt = classimg.shape[:2]  # Why is it flipped
         rgb = cv2.resize(rgb, dsize=(tt[1], tt[0]))
 
-    # Scale classimg to 0-255 ?
+    #colorimg = data.overlay_colors(rgb, labelmask)
 
-    colorimg = data.overlay_colors(rgb, labelmask)
+    colorimg = data.overlay_colors(rgb, classimg[:,:,:3])
 
-    colorimg_no_argmax = data.overlay_colors(rgb, classimg[:,:,:3])
-
-    return labelmask, colorimg, colorimg_no_argmax
+    return labelmask, colorimg
 
 
 def impose_colors(label, colors):
@@ -304,20 +304,40 @@ def impose_colors(label, colors):
     return rgb
 
 
-def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
+def write_class_stats(labelimage, reportfile):
+    repf = open(reportfile, 'a')
 
+    factor_4x = 2.5
+
+    # Tissue area, Epithelium area, High grade area, Low grade area
+    high_grade = 1
+    low_grade = 0
+    #epith = [0,1,2]
+    #tissue = [0,1,2,3]
+
+    hg = (labelimage == high_grade).sum()
+    lg = (labelimage == low_grade).sum()
+
+    repf.write('AREA High Grade: {}\n'.format(hg / factor_4x))
+    repf.write('AREA Low Grade: {}\n'.format(lg / factor_4x))
+
+    repf.close()
+
+
+def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     start_time = time.time()
-    # Set some constant
     pwd = os.getcwd()
-    #svs = '{}.svs'.format(imageroot)
     workingdir = os.path.basename(svs)
     workingdir, _ = os.path.splitext(workingdir)
     svs = OpenSlide(svs)
 
-    # Do the thing I used to do in Matlab:
     # now all the paths are going to be relative
     workingdir = os.path.join(proj, workingdir)
     os.chdir(workingdir)
+
+    reportfile = 'report.txt'
+    print 'Using reportfile {}'.format(reportfile)
+    repf = open(reportfile, 'a')
 
     # Populate a list of dirs that contain things we want
     '''
@@ -330,6 +350,7 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
         svs_level -= 1
     svs_level -= 1  # Use one less than the lowest level for better res.
     settings = get_settings(svs, scales, svs_level)
+
     '''
     # Now ready to do reassembly; re-use ~/histo-seg/code/data.py
     # Pass in proper settings to assemble_region:
@@ -339,7 +360,9 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     #   etc.
     # :: loop over result_types
     '''
+
     scaleimgs = [rebuild(settings, dir_set, r) for r in result_types]
+
     '''
     # scaleimgs is like:
     #   [[c0_s1, c0_s2, c0_s3],
@@ -350,14 +373,10 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     '''
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    #kernel = None
     colors = generate_color.generate(
         n=len(result_types)-1, whiteidx=ignorelabel, cmap='gist_rainbow')
 
     # Aggregate from the assembled files
-    # Fix scale_weights
-    #if scale_weights is None:
-    #    scale_weights = [1] * len(scales)
     classimg = []
     for c, r in zip(scaleimgs, result_types):
         filename = 'combo_{}.jpg'.format(r)
@@ -367,51 +386,60 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
 
     # Do the final classification
     classimg = np.dstack(classimg)
-    #classimg = (255-classimg) # invert colors
-
-    # Combine the high grade layers
-    # Want to do it so that they add to each other. Do it after decision?
-    #classimg[:,:,1] += classimg[:,:,4]
-    #classimg = classimg[:,:,:4]
 
     # Write out something pretty
     # Keep the indexing in case there's ever more than 4 layers
     # TODO (nathan) put a colormap here to handle more than 4 channels
-    cv2.imwrite(filename='dev_rgba.jpg', img=classimg[:,:,:4])
+    cv2.imwrite(filename='dev_rgba.png', img=classimg[:,:,:4])
 
     # Make decisions and overlay discrete classes
-    #classimg, colorimg, colorimg2 = decision(classimg, svs, svs_level, colors)
-    _, _, colorimg2 = decision(classimg, svs, svs_level, colors)
+    labelimage, colorimg = decision(classimg, svs, svs_level, colors)
 
-    #classfilename = 'class.png'
-    #colorfilename = 'color.jpg'
-    color2filename = 'color2.jpg'
-    #cv2.imwrite(filename=classfilename, img=classimg)
-    #cv2.imwrite(filename=colorfilename, img=colorimg)
-    cv2.imwrite(filename=color2filename, img=colorimg2)
+    repf.close()
+    write_class_stats(labelimage, reportfile)
+    repf = open(reportfile, 'a')
+
+    labelimage_name = 'label.png'
+    cv2.imwrite(filename=labelimage_name, img=labelimage)
+
+    color_filename = 'color.jpg'
+    cv2.imwrite(filename=color_filename, img=colorimg)
 
     os.chdir(pwd)  # Change back
     # TODO (nathan) implement cleanup
-
 
     end_time = time.time()
     elapsed = (end_time - start_time)
     print '\nTIME reassemble.main file: {} time: {}'.format(
         workingdir, elapsed)
 
+    repf.write('TIME REASSEMBLY {}\n'.format(elapsed))
+    repf.close()
 
+    return reportfile
 
 if __name__ == '__main__':
-    proj = '/home/nathan/histo-seg/pca/seg_0.8.1024_resume'
-    svs = sys.argv[1]
+    #start_time = time.time()
+    proj = sys.argv[1]
+    svs = sys.argv[2]
+
+    #proj = '/home/nathan/histo-seg/pca/seg_0.8.1024_resume'
+    #svs = sys.argv[1]
     #svs = '/home/nathan/data/pca_wsi/1305400.svs'
     print 'Working on image: {}'.format(svs)
     print 'Reading and writing to {}'.format(proj)
 
     # The strategy for weighting is to have scales not explicitly
     # included in the training weighed less
-    #scales = [812, 896, 956]
-    scales = [364, 384]
+    scales = [2100, 3000]
+    #scales = [364, 384]
     scale_weights = [0.5, 1]  # TODO (nathan)
 
     main(proj, svs, scales, scale_weights)
+
+    #end_time = time.time()
+    #elapsed = (end_time - start_time)
+    #repf = open(reportfile, 'a')
+    #repf.write('TIME ASSEMBLY TOTAL {}\n'.format(elapsed))
+    #repf.close()
+

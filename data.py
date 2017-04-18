@@ -312,6 +312,7 @@ def write_tile(tile, filename, writesize, normalize):
     tile = cv2.resize(
         tile, dsize=(writesize, writesize),
         interpolation=cv2.INTER_LINEAR)  # Before norm; for speed??
+
     if normalize:
         tile = cnorm.normalize(image=tile, target=None, verbose=False)
 
@@ -488,14 +489,22 @@ def make_inference(filename,
         filename, writeto, sub_dirs=create, remove=remove_first)
     tiledir = created_dirs[0]
 
+    # Spawn a reportfile:
+    reportfile = os.path.join(exp_home, 'report.txt')
+    print 'REPORTFILE at: {}'.format(reportfile)
+    repf = open(reportfile, 'a')  # Open in append mode
+
     if use_existing:
         # TODO add in here more feedback for this tree of action.
         # TODO add here checks to see if the written tiles match the requested tiles.
         print '\tUsing existing tiles located {}'.format(tiledir)
+        repf.write('\tUsing existing tiles located {}\n'.format(tiledir))
         for d in created_dirs[1:]:
             print '\tCreated: {}'.format(d)
+            repf.write('\tCreated: {}\n'.format(d))
 
-        return tiledir, created_dirs
+        repf.close()
+        return tiledir, created_dirs, reportfile
 
     for d in created_dirs:
         print '\tCreated: {}'.format(d)
@@ -503,6 +512,9 @@ def make_inference(filename,
     # Get the slide pointer
     wsi = OpenSlide(filename)
     print '\tWorking with slide {}'.format(filename)
+
+    # Output to reportfile
+    repf.write('\tWorking with slide {}\n'.format(filename))
 
     # TODO (nathan) low-level tumor location
     #tilemap = locate_tumor(wsi)
@@ -513,14 +525,19 @@ def make_inference(filename,
     map_file = os.path.join(exp_home, 'data_tilemap_{}.npy'.format(tilesize))
     np.save(file=map_file, arr=tilemap)
 
+    repf.write('{} scale tilemap: {}\n'.format(tilesize, map_file))
+
     wsi.close()
 
     end_time = time.time()
     elapsed = (end_time - start_time)
     print '\nTIME data.make_inference time: {}'.format(elapsed)
 
+    repf.write('TIME TILE scale{} {}\n'.format(tilesize, elapsed))
+    repf.close()
+
     #returns created_dirs after the first, which should always be 'tile'
-    return exp_home, created_dirs
+    return exp_home, created_dirs, reportfile
 
 
 def label_regions(m):

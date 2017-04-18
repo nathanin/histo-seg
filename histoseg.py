@@ -15,7 +15,7 @@ import generate_color
 CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
 sys.path.insert(0, CAFFE_ROOT + "/python")
 import caffe
-
+import time
 # Define inspection code that spits out the line it's called from (as str)
 
 
@@ -128,15 +128,21 @@ def get_output(d, pred, out, colors):
     return x
 
 
-def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0):
+def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportfile='./log.txt'):
     # Force dest to be a list
+    start_time = time.time()
     if isinstance(expdirs[1:], basestring):
         expdirs[1:] = [expdirs[1:]]
+
+    repf = open(reportfile, 'a')
+
 
     listfile = write_list_densedata(expdirs[0], exphome)
     model = substitute_img_list(model_template, exphome, listfile)
     net = init_net(model, weights, mode, GPU_ID)
     imgs = list_imgs(path=expdirs[0])
+
+
 
     # TODO PULL NUMBER  COLORS FROM NET DEF
     colors = generate_color.generate(n=5, whiteidx=3, cmap='jet')
@@ -144,6 +150,8 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0):
     for i, img in enumerate(imgs):
         if i % 100 == 0:
             print '\tHistoseg processing img {} / {}'.format(i, len(imgs))
+            repf.write('\tHistoseg processing img {} / {}\n'.format(i,
+                                                                    len(imgs)))
 
         _ = net.forward()
         pred = net.blobs['prob'].data
@@ -158,35 +166,16 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0):
             x = get_output(d, pred, out, colors)
             cv2.imwrite(filename=write_name, img=x)
 
+    end_time = time.time()
+    elapsed = (end_time - start_time)
+    print '\nTIME PROCESSING {} images in {}'.format(len(imgs), elapsed)
+
+    repf.write('TIME INFERENCE {} images in {}\n'.format(len(imgs), elapsed))
+
+    repf.close()
+
     # Clean pycaffe from the GPU
     # https://github.com/BVLC/caffe/issues/1702
     del net
 
 
-def process_dev(expdirs):
-    imgs = list_imgs(path=expdirs[0])
-
-    print '[Output from : {}]'.format(PrintFrame())
-    print "\tFound {} images in {}".format(len(imgs), expdirs[0])
-    print "\tOutputting for:"
-    for d in expdirs[1:]:
-        print "\t{}".format(d)
-
-    for i, img in enumerate(imgs):
-        if i % 50 == 0:
-            print '\tHisto-DEV processing img {:06d} / {:06d}'.format(
-                i, len(imgs))
-        devimg = cv2.imread(img)
-        devimg = cv2.cvtColor(devimg, cv2.COLOR_RGB2GRAY)
-        devimg = cv2.convertScaleAbs(devimg)
-        # devimg = devimg[:,:,0] # Not sure if the GRAY is 3-channel
-
-        write_name_base = os.path.basename(img).replace(
-            '.jpg', '.png')  # Fix magic file types
-        for d in expdirs[1:]:
-            write_name = os.path.join(d, write_name_base)
-            np_aug = np.random.rand(*devimg.shape)
-            devimg_aug = np.add(devimg * 0.5, np_aug)
-            #print write_name,
-            _, d = os.path.split(d)
-            cv2.imwrite(filename=write_name, img=devimg_aug)
