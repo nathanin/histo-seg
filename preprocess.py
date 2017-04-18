@@ -36,26 +36,56 @@ changelog
 
 
 '''
-Functions
+Method
 
-tissue_map = find_tissue(wsi, **kwargs)
-tumor_map = find_tumor(wsi, **kwargs)
+0. Grayscale threshold the entire low-resolution image
+    - Areas in the range of 2k - 4k in each dimension, no RAM problem
+1. Partition the low resolution area into 2000 x 2000 fixed
+2. For each tile,
+    If the white are is < threshold,
+        - Apply some metods to partition out a rough tumor mask
 
+3. Output a boolean mask the same size as the low-res image
+
+-- The output mask will be heavily resized. hopefully some information
+about the body of tissue and processable area remains
+. ON average, the downsampling will be ~10-fold.
+
+-Nathan
 '''
 
-def find_tissue(wsi, **kwargs):
-    pass
 
-def find_tumor(wsi, **kwargs):
-    pass
+import cv2
+import numpy as np
+import os
+import shutil
 
-def processable(img, **kwargs):
-    pass
 
-def is_white_space(img, **kwargs):
-    pass
+def extract_low_res(wsi, **kwargs):
+    # Parse some arguments -- really just for practice
+    img = wsi.read_region(
+        (0,0),
+        wsi.level_count-1,
+        wsi.level_dimensions[-1]
+    )
+    img = np.asarray(img)
+    img = img[:,:,:-1]  # Flip BGR to RGB ---???
+    return img
+
+
+def white_mask(img, **kwargs):
+    # Parse kwargs -- really for practice it's not necessary
+    img = cv2.cvtColor(img, cv2.RGB2GRAY)
+    white = img < white_index
+
+    # Do some smoothing?
+    # white is a np.bool ndarray
+    return white
 
 def main():
+
+
+
     pass
 
 
