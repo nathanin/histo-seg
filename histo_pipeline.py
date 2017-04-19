@@ -185,22 +185,38 @@ def tile_scale(**kwargs):
 
 
 def process_scale(**kwargs):
+    # This function is basically the main one
     s = 'Processing scale {}\n'.format(kwargs['scale'])
-    record_processing(kwargs['reportfile'])
+    s = '{}Beginning to tile... \n'.format(s)
+    record_processing(kwargs['reportfile'],s)
 
     # Some hard coded constants in there.. that's OK for now
+    tile_start = time.time()
     tile_scale(wsi=kwargs['wsi'], tilesize=kwargs['scale'], writesize=256,
                overlap=64, prefix='tile', processmap=kwargs['processmap'],
                reportfile=kwargs['reportfile'])
 
-    # Get the appropriate output dirs:
+    # Record the timing info
+    tile_end = time.time()
+    tile_elapsed = (tile_end - tile_start)
+    s = 'TIME Tile scale {} elapsed = {}'.format(
+        kwargs['scale'], tile_elapsed)
+    record_processing(kwargs['reportfile'], s)
+
+    # Re-define the appropriate output dirs:
     expdirs = ['tiles_{}'.format(kwargs['scale'])]
     for output in kwargs['outputs']:
-        expdirs.append('prob_{}_{}'.format(output, kwargs['scale']))
+        d = 'prob_{}_{}'.format(output, kwargs['scale'])
+        if os.path.exists(d):
+            expdirs.append('prob_{}_{}'.format(output, kwargs['scale']))
+        else:
+            raise Exception('Path exception: {} does not exist'.format(d))
 
     # Call histoseg.process()
     s = 'Passing control to histoseg.process\n'
-    record_processing(kwargs['reportfile'])
+    record_processing(kwargs['reportfile'], s)
+
+    process_start = time.time()
     histoseg.process(
         exphome=kwargs['exp_home'],
         expdirs=expdirs,
@@ -210,6 +226,11 @@ def process_scale(**kwargs):
         GPU_ID=0,
         reportfile=kwargs['reportfile']
     )
+    process_end = time.time()
+    process_elapsed = (process_end - process_start)
+    s = 'TIME Processing scale {} elapsed = {}'.format(
+        kwargs['scale'], process_elapsed)
+    record_processing(kwargs['reportfile'], s)
 
 
 def process_multiscale(**kwargs):
@@ -239,55 +260,155 @@ def process_multiscale(**kwargs):
 
 def aggregate_scales(**kwargs):
     # Reassemble the processed images from multiple scales
-    pass
 
+    assembly_start = time.time()
+    # Call reassemble.main()
+    s = 'Passing control to reassemble.main()\n'
+    record_processing(kwargs['reportfile'], s)
+    reassemble.main(
+        proj=kwargs['project'],
+        svs=kwargs['filename'],
+        scales=kwargs['scales'],
+        scale_weights=kwargs['scale_weights'])
+
+    assembly_end = time.time()
+    assembly_elapsed = (assembly_end - assembly_start)
+    s = 'TIME Assembly elapsed = {}\n'.format(assembly_elapsed)
+    record_processing(kwargs['reportfile'], s)
+
+
+def convert_px2micron(px, conversion=5.0):
+    micron_sq = px / conversion
+    return np.sqrt(micron_sq)
+
+
+def analyze_result(**kwargs):
+    # Low grade index = 1
+    # High grade index = 2
+    # Benign index = 3
+    # Stroma index = 4
+    stats = {'Cancer_area':0,
+             'Low_grade_area':0,
+             'High_grade_area':0,
+             'Low_grade_percent':0,
+             'High_grade_percent':0,
+             'Tissue_area':0}
+    labels = kwargs['labels']
+
+    # Total cancer area
+    canc_area = np.add([(labels == 1).sum(),
+                        (labels == 2).sum()])
+    stats['Cancer_area'] = convert_px2micron(canc_area)
+    s = 'Analysis: Cancer Area = {}\n'.format(canc_area)
+    record_processing(kwargs['reportfile'], s)
+
+    # Grade areas
+    low_grade_area = (labels == 1).sum()
+    high_grade_area = (labels == 2).sum()
+    stats['Low_grade_area'] = convert_px2micron(low_grade_area)
+    stats['High_grade_area'] = convert_px2micron(high_grade_area)
+    s = 'Analysis: Low Grade Area = {}\n'.format(low_grade_area)
+    s = '{}Analysis: High Grade Area = {}\n'.format(s, high_grade_area)
+    record_processing(kwargs['reportfile'], s)
+
+    # Grade percentages
+    low_grade_percent = low_grade_area / float(canc_area)
+    high_grade_percent = high_grade_area / float(canc_area)
+    stats['Low_grade_percent'] = low_grade_percent
+    stats['High_grade_percent'] = high_grade_percent
+    s = 'Analysis: Low Grade Percent = {}\n'.format(low_grade_percent)
+    s = '{}Analysis: High Grade Percent = {}\n'.format(s, high_grade_percent)
+    record_processing(kwargs['reportfile'], s)
+
+    # Tissue area
+    tiss_area = np.add([(labels == 1).sum(),
+                        (labels == 2).sum(),
+                        (labels == 3).sum(),
+                        (labels == 4).sum()])
+    stats['Tissue_area'] = convert_px2micron(tiss_area)
+    s = 'Analysis: Tissue Area = {}\n'.format(tiss_area)
+    record_processing(kwargs['reportfile'], s)
+    return stats
+
+
+def create_report(**kwargs):
+    time_elapsed = kwargs['time_elapsed']
+    pass
 
 
 def main(**kwargs):
     # Take in a huge list of arguments
     # Pass each sub routine it's own little set of arguments
 
-    repstr = 'Working on slide {}\n'.format(kwargs['filename'])
-    record_processing(kwargs['reportfile'], repstr)
-
+    time_all_start = time.time()
     exp_home = init_file_system(
         filename=kwargs['filename'],
         writeto=kwargs['writeto'],
         outputs=kwargs['outputs'],
-        scales=kwargs['scales'],
-        reportfile=kwargs['reportfile']
+        scales=kwargs['scales']
     )
+    reportfile = os.path.join(exp_home, 'report.txt')
+    print 'Recording run info to {}'.format(reportfile)
+    repstr = 'Working on slide {}\n'.format(kwargs['filename'])
+    record_processing(reportfile, repstr)
 
     process_map = preprocessing(
         filename=kwargs['filename'],
-        sub_dirs=kwargs['sub_dirs'],
-        reportfile=kwargs['reportfile'],
-        exp_home=exp_home
+        reportfile=reportfile,
     )
 
     process_multiscale(
         filename=kwargs['filename'],
-        sub_dirs=kwargs['sub_dirs'],
         scales=kwargs['scales'],
         weights=kwargs['weights'],
-        reportfile=kwargs['reportfile'],
+        outputs=kwargs['outputs'],
+        model_template=kwargs['model_template'],
+        reportfile=reportfile,
         process_map=process_map,
-        exp_home=exp_home,
-        weights=kwargs['weights']
+        exp_home=exp_home
     )
 
+    labels, colorized = aggregate_scales(
+        project=kwargs['writeto'],
+        filename=kwargs['filename'],
+        scales=kwargs['scales'],
+        scale_weights=kwargs['scale_weights'],
+        reportfile=reportfile
+    )
 
+    time_all_end = time.time()
+    time_total_elapsed = (time_all_end - time_all_start)
+    s = 'TIME total elapsed = {}\n'.format(time_total_elapsed)
+    record_processing(reportfile, s)
 
-    aggregate_scales(args)
-    pass
-
+    # TODO (nathan) create some slide-level output
+    analyze_result(
+        filename=kwargs['filename'],
+        exp_home=exp_home,
+        labels=labels,
+        colorized=colorized,
+        reportfile=reportfile
+    )
 
 
 if __name__ == '__main__':
     # Take in or set args
-    scales = [2100, 3500]
-    weights = ''
-    model_proto = ''
+    # These stay the same
+    scales = [512, 1024]
+    scale_weights = [1, 0.5]
+    weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_iter_100000.caffemodel',
+               '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
+    model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
+    writeto = '/home/nathan/histo-seg/pca/dev'
     outputs = [0,1,2,3,4]
-    filename = ''
-    main()
+
+    # Filename changes
+    #filename = sys.argv[1]
+    filename = '/home/nathan/data/pca_wsi/1305400.svs'
+    main(filename=filename,
+         scales=scales,
+         scale_weights=scale_weights,
+         weights=weights,
+         model_template=model_template,
+         outputs=outputs,
+         writeto=writeto)

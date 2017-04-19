@@ -111,7 +111,9 @@ def get_output(d, pred, out, colors):
         x = impose_colors(labels, colors)
 
     elif "prob" in d:
-        layer = int(d[4])  # This will work as long as"
+        # MAGIC:
+        # "prob_X"
+        layer = int(d[5])  # This will work as long as"
         # 1. "prob" is in front &&
         # 2. there are only single digit number of classes.
         # TODO replace with regex
@@ -142,8 +144,6 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportf
     net = init_net(model, weights, mode, GPU_ID)
     imgs = list_imgs(path=expdirs[0])
 
-
-
     # TODO PULL NUMBER  COLORS FROM NET DEF
     colors = generate_color.generate(n=5, whiteidx=3, cmap='jet')
 
@@ -160,6 +160,7 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportf
         ## Iterate through the list of directories and write in appropriate outputs:
         write_name_base = os.path.basename(img).replace(
             '.jpg', '.png')  # Fix magic file types
+        # be smarter
         for d in expdirs[1:]:
             write_name = os.path.join(d, write_name_base)
             _, d = os.path.split(d)

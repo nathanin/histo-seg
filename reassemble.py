@@ -416,8 +416,6 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     repf.write('TIME REASSEMBLY {}\n'.format(elapsed))
     repf.close()
 
-    return reportfile
-
 if __name__ == '__main__':
     #start_time = time.time()
     proj = sys.argv[1]
