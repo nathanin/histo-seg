@@ -1,5 +1,6 @@
 import data
 import histoseg
+import reassemble
 
 import os
 import glob
@@ -41,33 +42,38 @@ def init_file_system(**kwargs):
     slide_name, ex = os.path.splitext(tail)
     exp_home = os.path.join(kwargs['writeto'], slide_name)
 
-    s = 'Creating file system at : {}\n'.format(exp_home)
-    record_processing(kwargs['reportfile'], s)
-
     # Sub-dirs hold tiles and the results
-    if not os.path.exists(exp_home):
-        try:
-            os.makedirs(exp_home)
-            for s in kwargs['scales']:
-                d = os.path.join(exp_home, 'tiles_{}'.format(s))
+
+    if os.path.exists(exp_home):
+        shutil.rmtree(exp_home)
+
+    try:
+        os.makedirs(exp_home)
+        reportfile = os.path.join(exp_home, 'report.txt')
+        s = 'Creating file system at : {}\n'.format(exp_home)
+        s = '{}Recording output to {}\n'.format(s, reportfile)
+        record_processing(reportfile, s)
+
+        for scale in kwargs['scales']:
+            d = os.path.join(exp_home, 'tiles_{}'.format(scale))
+            os.makedirs(d)
+            for d in kwargs['outputs']:
+                d = os.path.join(exp_home, 'prob_{}_{}'.format(d,scale))
                 os.makedirs(d)
-                for d in kwargs['outputs']:
-                    d = os.path.join(exp_home, 'prob_{}_{}'.format(d,s)
-                    os.makedirs(d)
-                    s = 'Created {}\n'.format(d)
-                    record_processing(kwargs['reportfile'], s)
-        except:
-            print 'Error initializing filesystem'
-            print 'Attempting to create {}'.format(exp_home)
-            print 'Attempting to create {}'.format(d)
-            s = 'Failure intializing filesystem\n'.format(exp_home)
-            record_processing(kwargs['reportfile'], s)
-            return 0
+                repstr = 'Created {}\n'.format(d)
+                record_processing(reportfile, repstr)
+    except:
+        print 'Error initializing filesystem'
+        print 'Attempting to create {}'.format(exp_home)
+        print 'Attempting to create {}'.format(d)
+        s = 'Failure intializing filesystem\n'.format(exp_home)
+        record_processing(reportfile, s)
+        return 0
 
-    return exp_home
+    return exp_home, reportfile
 
 
-def whitespace(img, reportfile, white_pt=210):
+def whitespace(img, reportfile, white_pt=190):
     # Simple. Could be more sophisticated
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -90,7 +96,7 @@ def read_region(wsi, start, level, dims):
     )
     img = np.array(img)
     img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
-    img = cv2.cvtColor(img, cv2.BGR2RGB)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     return img
 
@@ -105,7 +111,11 @@ def get_process_map(img, tilesize, masks, reportfile):
     inv = lambda x: 1-x
     masks = [inv(mask) for mask in masks]
     n_masks = len(masks)
-    mask = np.add(masks)
+    if n_masks == 1:
+        mask = masks[0]
+    elif n_masks > 1:
+        mask = np.add(masks)
+
     mask = mask == n_masks
 
     # Resize
@@ -139,7 +149,7 @@ def preprocessing(**kwargs):
     # TODO (nathan) add tumor location here
     #unprocessable = unprocessable_area(img)
 
-    lo_res = 3000
+    lo_res = 128
     masks = [whitemap]
     process_map = get_process_map(img, lo_res, masks, kwargs['reportfile'])
 
@@ -154,9 +164,9 @@ def clean_intermediates(dirlist):
 def tile_scale(**kwargs):
     # Perform tiling for one scale, according to the usual method.
     # Call data.tile_wsi
-    writeto = 'tiles_{}'.format(scale)
+    writeto = 'tiles_{}'.format(kwargs['tilesize'])
 
-    # Work with kwargs['processmap'] to get tilemap:
+    # Work with kwargs['process_map'] to get tilemap:
     wsi = kwargs['wsi']
     tilesize = kwargs['tilesize']
     if wsi.properties['aperio.AppMag'] == '20':
@@ -165,23 +175,31 @@ def tile_scale(**kwargs):
         level_20 = 1
     nrow, ncol = [wsi.level_dimensions[level_20][0] / tilesize,
                   wsi.level_dimensions[level_20][1] / tilesize]
-    tilemap = cv2.reshape(kwargs['processmap'],
-                          dsize=(nrow,ncol),
-                          interpolation=cv2.INTER_NEAREST)
-    s = 'Resized processmap from {} to {}\n'.format(
-        kwargs['processmap'].shape, tilemap.shape
+    tilemap = kwargs['process_map']
+    tilemap.dtype = np.uint8
+    tilemap = cv2.resize(tilemap,
+                         dsize=(nrow,ncol),
+                         interpolation=cv2.INTER_NEAREST)
+    s = 'Resized process_map from {} to {}\n'.format(
+        kwargs['process_map'].shape, tilemap.shape
     )
     record_processing(kwargs['reportfile'], s)
 
-    data.tile_wsi(
+    tilemap = data.tile_wsi(
         wsi=kwargs['wsi'],
         tilesize=kwargs['tilesize'],
         writesize=kwargs['writesize'],
-        writeto=writeto,
+        writeto=os.path.join(kwargs['exp_home'], writeto),
         overlap=kwargs['overlap'],
         prefix=kwargs['prefix'],
         tilemap=tilemap
     )
+
+    tilemap_name = os.path.join(kwargs['exp_home'],
+                                'data_tilemap_{}.npy'.format(kwargs['tilesize']))
+    s = 'Saving tilemap to {}\n'.format(tilemap_name)
+    record_processing(kwargs['reportfile'], s)
+    np.save(file=tilemap_name, arr=tilemap)
 
 
 def process_scale(**kwargs):
@@ -193,22 +211,24 @@ def process_scale(**kwargs):
     # Some hard coded constants in there.. that's OK for now
     tile_start = time.time()
     tile_scale(wsi=kwargs['wsi'], tilesize=kwargs['scale'], writesize=256,
-               overlap=64, prefix='tile', processmap=kwargs['processmap'],
-               reportfile=kwargs['reportfile'])
+               overlap=64, prefix='tile', process_map=kwargs['process_map'],
+               reportfile=kwargs['reportfile'], exp_home=kwargs['exp_home'])
 
     # Record the timing info
     tile_end = time.time()
     tile_elapsed = (tile_end - tile_start)
-    s = 'TIME Tile scale {} elapsed = {}'.format(
+    s = 'TIME Tile scale {} elapsed = {}\n'.format(
         kwargs['scale'], tile_elapsed)
     record_processing(kwargs['reportfile'], s)
 
     # Re-define the appropriate output dirs:
-    expdirs = ['tiles_{}'.format(kwargs['scale'])]
+    expdirs = [os.path.join(kwargs['exp_home'],
+                            'tiles_{}'.format(kwargs['scale']))]
     for output in kwargs['outputs']:
-        d = 'prob_{}_{}'.format(output, kwargs['scale'])
+        d = os.path.join(kwargs['exp_home'],
+                         'prob_{}_{}'.format(output, kwargs['scale']))
         if os.path.exists(d):
-            expdirs.append('prob_{}_{}'.format(output, kwargs['scale']))
+            expdirs.append(d)
         else:
             raise Exception('Path exception: {} does not exist'.format(d))
 
@@ -220,15 +240,15 @@ def process_scale(**kwargs):
     histoseg.process(
         exphome=kwargs['exp_home'],
         expdirs=expdirs,
-        model_tempplate=kwargs['model_template'],
+        model_template=kwargs['model_template'],
         weights=kwargs['weights'],
-        mode=1,
+        mode=0,
         GPU_ID=0,
         reportfile=kwargs['reportfile']
     )
     process_end = time.time()
     process_elapsed = (process_end - process_start)
-    s = 'TIME Processing scale {} elapsed = {}'.format(
+    s = 'TIME Processing scale {} elapsed = {}\n'.format(
         kwargs['scale'], process_elapsed)
     record_processing(kwargs['reportfile'], s)
 
@@ -244,7 +264,7 @@ def process_multiscale(**kwargs):
         process_scale(
             scale=scale,
             wsi=wsi,
-            processmap=kwargs['processmap'],
+            process_map=kwargs['process_map'],
             reportfile=kwargs['reportfile'],
             outputs=kwargs['outputs'],
             exp_home=kwargs['exp_home'],
@@ -265,7 +285,7 @@ def aggregate_scales(**kwargs):
     # Call reassemble.main()
     s = 'Passing control to reassemble.main()\n'
     record_processing(kwargs['reportfile'], s)
-    reassemble.main(
+    labels, colorized = reassemble.main(
         proj=kwargs['project'],
         svs=kwargs['filename'],
         scales=kwargs['scales'],
@@ -275,6 +295,8 @@ def aggregate_scales(**kwargs):
     assembly_elapsed = (assembly_end - assembly_start)
     s = 'TIME Assembly elapsed = {}\n'.format(assembly_elapsed)
     record_processing(kwargs['reportfile'], s)
+
+    return labels, colorized
 
 
 def convert_px2micron(px, conversion=5.0):
@@ -341,13 +363,13 @@ def main(**kwargs):
     # Pass each sub routine it's own little set of arguments
 
     time_all_start = time.time()
-    exp_home = init_file_system(
+    exp_home, reportfile = init_file_system(
         filename=kwargs['filename'],
         writeto=kwargs['writeto'],
         outputs=kwargs['outputs'],
         scales=kwargs['scales']
     )
-    reportfile = os.path.join(exp_home, 'report.txt')
+    #reportfile = os.path.join(exp_home, 'report.txt')
     print 'Recording run info to {}'.format(reportfile)
     repstr = 'Working on slide {}\n'.format(kwargs['filename'])
     record_processing(reportfile, repstr)
@@ -396,7 +418,7 @@ if __name__ == '__main__':
     # These stay the same
     scales = [512, 1024]
     scale_weights = [1, 0.5]
-    weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_iter_100000.caffemodel',
+    weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
     writeto = '/home/nathan/histo-seg/pca/dev'

@@ -378,7 +378,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile',
     tile_top, overlap_top, nrow, ncol = nrow_ncol(wsi, tilesize, overlap)
 
     # There's probably some clever way to write this
-    if tilemap:
+    if tilemap is not None:
         tumor_located = tilemap
         # Reset tilemap
         tilemap = np.zeros(shape=(nrow, ncol), dtype=np.uint32)
@@ -397,7 +397,7 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile',
     for index, coords in enumerate(lst):
         # Incrementally print some feedback
         if index % 100 == 0:
-            print '\t{:05d} / {:05d} ({} written so far)'.format(
+            print '\t{:06d} / {:06d} ({:06d} written)'.format(
                 index, ntiles, written)
 
         # Coordinates of tile's upper-left corner w.r.t. the predfined lattice
@@ -414,18 +414,18 @@ def tile_wsi(wsi, tilesize, writesize, writeto, overlap=0, prefix='tile',
             tile = np.array(tile)
 
             # Second check for white space
-            if check_white(tile):
-                filename = os.path.join(writeto, name)
-                write_tile(tile, filename, writesize, normalize=True)
-                tilemap = update_map(tilemap, r, c, index)
+            #if check_white(tile):
+            filename = os.path.join(writeto, name)
+            write_tile(tile, filename, writesize, normalize=False)
+            tilemap = update_map(tilemap, r, c, index)
 
-                # Increment our dumb counter
-                written += 1
+            # Increment our dumb counter
+            written += 1
 
     # Print out timing info
     end_time = time.time()
     elapsed = (end_time - start_time)
-    print '\nTIME data.tile_wsi tilesize: {} time: {}'.format(
+    print '\nTIME data.tile_wsi tilesize: {} time: {}\n'.format(
         tilesize, elapsed)
 
     return tilemap

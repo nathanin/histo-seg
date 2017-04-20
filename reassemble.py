@@ -18,7 +18,7 @@ import generate_color
 import time
 
 # Set defaults
-result_types = ['prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+result_types = ['prob_0', 'prob_1', 'prob_2', 'prob_3', 'prob_4']
 
 
 def parse_dirs(scales, result_types=result_types):
@@ -415,6 +415,9 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
 
     repf.write('TIME REASSEMBLY {}\n'.format(elapsed))
     repf.close()
+
+    return labelimage, colorimg
+
 
 if __name__ == '__main__':
     #start_time = time.time()

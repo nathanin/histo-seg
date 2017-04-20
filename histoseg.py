@@ -138,7 +138,6 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportf
 
     repf = open(reportfile, 'a')
 
-
     listfile = write_list_densedata(expdirs[0], exphome)
     model = substitute_img_list(model_template, exphome, listfile)
     net = init_net(model, weights, mode, GPU_ID)
