@@ -3,6 +3,7 @@
 import data
 import histoseg
 import reassemble
+import colordeconvolution
 
 import os
 import glob
@@ -126,9 +127,10 @@ def get_process_map(img, tilesize, masks, reportfile):
     #mask = cv2.resize(mask, dsize=(nrow, ncol),
     #                  interpolation = cv2.INTER_NEAREST)
 
+
     # area
     mask_area = np.sqrt(mask.sum() / 2.5)
-    s = 'Processable area is ~ {} sq. microns\n'.format(mask_area)
+    s = 'PREPROCESS Processable area is ~ {} sq. microns\n'.format(mask_area)
     record_processing(reportfile, s)
 
     return mask
@@ -142,8 +144,7 @@ def preprocessing(**kwargs):
                       wsi.level_count-1,
                       wsi.level_dimensions[-1]
                       )
-    s = 'Preprocessing...\n'
-    s = '{}Successfully read image from {}\n'.format(s,kwargs['filename'])
+    s = '{}PREPROCESS Successfully read image from {}\n'.format(s,kwargs['filename'])
     record_processing(kwargs['reportfile'], s)
 
     # Boolean image of white areas
@@ -151,9 +152,13 @@ def preprocessing(**kwargs):
 
     # TODO (nathan) add tumor location here
     #unprocessable = unprocessable_area(img)
+    # I don't think an H& E will really do it. 
+    # It'll take some mighty processing to get the job done
+    # I mean like.. it's probabaly doable.
+    # OK I'll try tomorrow.
 
     lo_res = 128
-    masks = [whitemap]
+    masks = [whitemap, hem_map]
     process_map = get_process_map(img, lo_res, masks, kwargs['reportfile'])
 
     return process_map
@@ -183,7 +188,7 @@ def tile_scale(**kwargs):
     tilemap = cv2.resize(tilemap,
                          dsize=(nrow,ncol),
                          interpolation=cv2.INTER_NEAREST)
-    s = 'Resized process_map from {} to {}\n'.format(
+    s = 'TILE Resized process_map from {} to {}\n'.format(
         kwargs['process_map'].shape, tilemap.shape
     )
     record_processing(kwargs['reportfile'], s)
@@ -200,7 +205,7 @@ def tile_scale(**kwargs):
 
     tilemap_name = os.path.join(kwargs['exp_home'],
                                 'data_tilemap_{}.npy'.format(kwargs['tilesize']))
-    s = 'Saving tilemap to {}\n'.format(tilemap_name)
+    s = 'TILE Saving tilemap to {}\n'.format(tilemap_name)
     record_processing(kwargs['reportfile'], s)
     np.save(file=tilemap_name, arr=tilemap)
 
@@ -286,7 +291,7 @@ def aggregate_scales(**kwargs):
 
     assembly_start = time.time()
     # Call reassemble.main()
-    s = 'Passing control to reassemble.main()\n'
+    s = '\tPassing control to reassemble.main()\n'
     record_processing(kwargs['reportfile'], s)
     labels, colorized = reassemble.main(
         proj=kwargs['project'],
@@ -324,7 +329,7 @@ def analyze_result(**kwargs):
     canc_area = np.add([(labels == 1).sum(),
                         (labels == 2).sum()])
     stats['Cancer_area'] = convert_px2micron(canc_area)
-    s = 'Analysis: Cancer Area = {}\n'.format(canc_area)
+    s = 'ANALYSIS: Cancer Area = {}\n'.format(canc_area)
     record_processing(kwargs['reportfile'], s)
 
     # Grade areas
@@ -332,8 +337,8 @@ def analyze_result(**kwargs):
     high_grade_area = (labels == 2).sum()
     stats['Low_grade_area'] = convert_px2micron(low_grade_area)
     stats['High_grade_area'] = convert_px2micron(high_grade_area)
-    s = 'Analysis: Low Grade Area = {}\n'.format(low_grade_area)
-    s = '{}Analysis: High Grade Area = {}\n'.format(s, high_grade_area)
+    s = 'ANALYSIS: Low Grade Area = {}\n'.format(low_grade_area)
+    s = '{}ANALYSIS: High Grade Area = {}\n'.format(s, high_grade_area)
     record_processing(kwargs['reportfile'], s)
 
     # Grade percentages
@@ -341,8 +346,8 @@ def analyze_result(**kwargs):
     high_grade_percent = high_grade_area / float(canc_area)
     stats['Low_grade_percent'] = low_grade_percent
     stats['High_grade_percent'] = high_grade_percent
-    s = 'Analysis: Low Grade Percent = {}\n'.format(low_grade_percent)
-    s = '{}Analysis: High Grade Percent = {}\n'.format(s, high_grade_percent)
+    s = 'ANALYSIS: Low Grade Percent = {}\n'.format(low_grade_percent)
+    s = '{}ANALYSIS: High Grade Percent = {}\n'.format(s, high_grade_percent)
     record_processing(kwargs['reportfile'], s)
 
     # Tissue area
@@ -351,7 +356,7 @@ def analyze_result(**kwargs):
                         (labels == 3).sum(),
                         (labels == 4).sum()])
     stats['Tissue_area'] = convert_px2micron(tiss_area)
-    s = 'Analysis: Tissue Area = {}\n'.format(tiss_area)
+    s = 'ANALYSIS: Tissue Area = {}\n'.format(tiss_area)
     record_processing(kwargs['reportfile'], s)
     return stats
 
