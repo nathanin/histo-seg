@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import data
 import histoseg
 import reassemble
@@ -6,6 +8,7 @@ import os
 import glob
 import time
 import shutil
+import sys
 
 import cv2
 import numpy as np
@@ -404,20 +407,21 @@ def main(**kwargs):
     record_processing(reportfile, s)
 
     # TODO (nathan) create some slide-level output
-    analyze_result(
-        filename=kwargs['filename'],
-        exp_home=exp_home,
-        labels=labels,
-        colorized=colorized,
-        reportfile=reportfile
-    )
+
+    # analyze_result(
+    #     filename=kwargs['filename'],
+    #     exp_home=exp_home,
+    #     labels=labels,
+    #     colorized=colorized,
+    #     reportfile=reportfile
+    # )
 
 
 if __name__ == '__main__':
     # Take in or set args
     # These stay the same
     scales = [512, 1024]
-    scale_weights = [1, 0.5]
+    scale_weights = [2, 0.5]
     weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
@@ -425,8 +429,8 @@ if __name__ == '__main__':
     outputs = [0,1,2,3,4]
 
     # Filename changes
-    #filename = sys.argv[1]
-    filename = '/home/nathan/data/pca_wsi/1305400.svs'
+    filename = sys.argv[1]
+    #filename = '/home/nathan/data/pca_wsi/1305400.svs'
     main(filename=filename,
          scales=scales,
          scale_weights=scale_weights,
