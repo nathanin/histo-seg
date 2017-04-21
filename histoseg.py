@@ -12,9 +12,13 @@ import inspect
 import numpy as np
 import generate_color
 
-# CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
-# sys.path.insert(0, CAFFE_ROOT + "/python")
-# import caffe
+try:
+    CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+    sys.path.insert(0, CAFFE_ROOT + "/python")
+    import caffe
+except:
+    print "HISTOSEG import error: caffe"
+    
 import time
 # Define inspection code that spits out the line it's called from (as str)
 
