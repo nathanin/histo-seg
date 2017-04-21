@@ -218,6 +218,9 @@ def rebuild(settings, dir_set, r):
 
 
 def aggregate_scales(imgs, kernel=None, weights=None):
+    # This is the function that averages across scale outputs
+    # It gives back a single intensity image
+     
     start_time = time.time()
     #if kernel is None:
     combo = [img for img in imgs]
@@ -250,7 +253,7 @@ def aggregate_scales(imgs, kernel=None, weights=None):
 
 
 
-def decision(classimg, svs, svs_level, colors):
+def decision(classimg, svs, svs_level, colors, settings):
     # The main thing this function does now is to load the rgb
     # Load up RGB image
     rgb = svs.read_region(
@@ -264,10 +267,26 @@ def decision(classimg, svs, svs_level, colors):
     # -- Also have to change it somewhere else, idk where
     rgb = cv2.resize(rgb, dsize=(0,0), fx=0.5, fy=0.5)
 
-    labelmask = np.argmax(classimg, axis=2)
+    # Define background
+    s0 = settings.keys()[0]
+    tilemap = settings[s0][0]
+    # tilemap = np.swapaxes(tilemap, 0,1)
+    background = tilemap == 0
+    background.dtype = np.uint8
+
+    # This is one of the most confounding quirks ever:
+    # For some reason, switch the 1st and 2nd elements of shape
+    background = cv2.resize(background, dsize=(rgb.shape[1], rgb.shape[0]),
+        interpolation=cv2.INTER_NEAREST)
+    background.dtype = np.bool
+    #background = np.swapaxes(background, 0,1)  # ????
+
+    labelmask = np.argmax(classimg, axis=2) + 1
+    labelmask[background] = 0
 
     # Reassign Grade 5 to Grade 4. Re-label "high grade"
-    labelmask[labelmask == 4] = 1
+    # TODO (nathan) fix magic numbers !!!
+    labelmask[labelmask == 5] = 2
 
     # Convert lable matrix to solid RGB colors
     #labelmask = impose_colors(labelmask, colors)
@@ -280,7 +299,8 @@ def decision(classimg, svs, svs_level, colors):
 
     #colorimg = data.overlay_colors(rgb, labelmask)
 
-    colorimg = data.overlay_colors(rgb, classimg[:,:,:3])
+    colored_label = impose_colors(labelmask, colors)
+    colorimg = data.overlay_colors(rgb, colored_label)
 
     return labelmask, colorimg
 
@@ -318,13 +338,13 @@ def write_class_stats(labelimage, reportfile):
     hg = (labelimage == high_grade).sum()
     lg = (labelimage == low_grade).sum()
 
-    repf.write('AREA High Grade: {}\n'.format(hg / factor_4x))
-    repf.write('AREA Low Grade: {}\n'.format(lg / factor_4x))
+    repf.write('REASSEMBLY AREA High Grade: {} px\n'.format(hg))
+    repf.write('REASSEMBLY AREA Low Grade: {} px\n'.format(lg))
 
     repf.close()
 
 
-def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
+def main(proj, svs, scales, scale_weights=None, ignorelabel = [0,4], reportfile = 'report.txt'):
     start_time = time.time()
     pwd = os.getcwd()
     workingdir = os.path.basename(svs)
@@ -335,7 +355,6 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     workingdir = os.path.join(proj, workingdir)
     os.chdir(workingdir)
 
-    reportfile = 'report.txt'
     print 'Using reportfile {}'.format(reportfile)
     repf = open(reportfile, 'a')
 
@@ -351,49 +370,41 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     svs_level -= 1  # Use one less than the lowest level for better res.
     settings = get_settings(svs, scales, svs_level)
 
-    '''
-    # Now ready to do reassembly; re-use ~/histo-seg/code/data.py
-    # Pass in proper settings to assemble_region:
-    # Do it like this:
-    #   build output 1, all scales
-    #   build output 2, all scales,
-    #   etc.
-    # :: loop over result_types
-    '''
-
+    # scaleimgs is a list of lists:
+    # e.g. scaleimgs[0] is images of class 0 from all scales
     scaleimgs = [rebuild(settings, dir_set, r) for r in result_types]
-
-    '''
-    # scaleimgs is like:
-    #   [[c0_s1, c0_s2, c0_s3],
-    #    [c1_s1, c1_s2, s1_s3],
-    #    etc. ]
-    # Now combine each class
-    # With a little smoothing and weighting
-    '''
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     colors = generate_color.generate(
-        n=len(result_types)-1, whiteidx=ignorelabel, cmap='gist_rainbow')
+        n=len(result_types), whiteidx=ignorelabel, cmap='brg')
+
+    repstr = 'COLORS:'
+    for k in range(colors.shape[0]):
+        repstr = '{}\n{:3d} | {}'.format(repstr, k, colors[k, :])
+
+    repstr = '{}\n'.format(repstr)
+    repf.write(repstr)
 
     # Aggregate from the assembled files
     classimg = []
     for c, r in zip(scaleimgs, result_types):
         filename = 'combo_{}.jpg'.format(r)
+
+        # aggregate_scales() essentially averages the elements of c
         combo = aggregate_scales(c, kernel=kernel, weights=scale_weights)
+
         classimg.append(combo)  # Important to go in order
         cv2.imwrite(filename=filename, img=combo)
 
+    # Get a background image from tilemaps
     # Do the final classification
     classimg = np.dstack(classimg)
 
-    # Write out something pretty
-    # Keep the indexing in case there's ever more than 4 layers
     # TODO (nathan) put a colormap here to handle more than 4 channels
     cv2.imwrite(filename='dev_rgba.png', img=classimg[:,:,:4])
 
     # Make decisions and overlay discrete classes
-    labelimage, colorimg = decision(classimg, svs, svs_level, colors)
+    labelimage, colorimg = decision(classimg, svs, svs_level, colors, settings)
 
     repf.close()
     write_class_stats(labelimage, reportfile)
@@ -416,7 +427,7 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = 3):
     repf.write('TIME REASSEMBLY {}\n'.format(elapsed))
     repf.close()
 
-    return labelimage, colorimg
+    return labelimage, cv2.cvtColor(colorimg, cv2.COLOR_BGR2RGB)
 
 
 if __name__ == '__main__':

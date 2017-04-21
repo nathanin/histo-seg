@@ -3,7 +3,6 @@
 import data
 import histoseg
 import reassemble
-import colordeconvolution
 
 import os
 import glob
@@ -15,6 +14,13 @@ import cv2
 import numpy as np
 from openslide import OpenSlide
 
+
+# For making reports
+from matplotlib import pyplot as plt
+from matplotlib import rcParams
+import pandas as pd
+
+rcParams.update({'figure.autolayout': True})
 
 '''
 
@@ -39,12 +45,26 @@ def record_processing(repf, st):
     f.close()
 
 
-def init_file_system(**kwargs):
-    # Create the file system
-    filename = kwargs['filename']
+# Two helper functions that let me skip a lot of effort
+def get_exp_home(writeto, filename):
     tail = os.path.basename(filename)
     slide_name, ex = os.path.splitext(tail)
-    exp_home = os.path.join(kwargs['writeto'], slide_name)
+    exp_home = os.path.join(writeto, slide_name)
+
+    return exp_home
+
+
+def get_reportfile(exp_home, reportfile='report.txt'):
+    return os.path.join(exp_home, reportfile)
+
+
+def init_file_system(**kwargs):
+    # Create the file system
+    exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
+    # filename = kwargs['filename']
+    # tail = os.path.basename(filename)
+    # slide_name, ex = os.path.splitext(tail)
+    # exp_home = os.path.join(kwargs['writeto'], slide_name)
 
     # Sub-dirs hold tiles and the results
 
@@ -53,7 +73,8 @@ def init_file_system(**kwargs):
 
     try:
         os.makedirs(exp_home)
-        reportfile = os.path.join(exp_home, 'report.txt')
+        reportfile = get_reportfile(exp_home)
+        # reportfile = os.path.join(exp_home, 'report.txt')
         s = 'Creating file system at : {}\n'.format(exp_home)
         s = '{}Recording output to {}\n'.format(s, reportfile)
         record_processing(reportfile, s)
@@ -77,11 +98,15 @@ def init_file_system(**kwargs):
     return exp_home, reportfile
 
 
-def whitespace(img, reportfile, white_pt=190):
+def whitespace(img, reportfile, white_pt=210):
     # Simple. Could be more sophisticated
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     white = gray > white_pt
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    white.dtype = np.uint8
+    white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, kernel)
+    white.dtype = np.bool
 
     s = 'Found {} px above grayscale value {}\n'.format(
         white.sum(), white_pt
@@ -127,12 +152,6 @@ def get_process_map(img, tilesize, masks, reportfile):
     #mask = cv2.resize(mask, dsize=(nrow, ncol),
     #                  interpolation = cv2.INTER_NEAREST)
 
-
-    # area
-    mask_area = np.sqrt(mask.sum() / 2.5)
-    s = 'PREPROCESS Processable area is ~ {} sq. microns\n'.format(mask_area)
-    record_processing(reportfile, s)
-
     return mask
 
 
@@ -144,7 +163,7 @@ def preprocessing(**kwargs):
                       wsi.level_count-1,
                       wsi.level_dimensions[-1]
                       )
-    s = '{}PREPROCESS Successfully read image from {}\n'.format(s,kwargs['filename'])
+    s = 'PREPROCESS Successfully read image from {}\n'.format(kwargs['filename'])
     record_processing(kwargs['reportfile'], s)
 
     # Boolean image of white areas
@@ -158,7 +177,7 @@ def preprocessing(**kwargs):
     # OK I'll try tomorrow.
 
     lo_res = 128
-    masks = [whitemap, hem_map]
+    masks = [whitemap]
     process_map = get_process_map(img, lo_res, masks, kwargs['reportfile'])
 
     return process_map
@@ -241,7 +260,7 @@ def process_scale(**kwargs):
             raise Exception('Path exception: {} does not exist'.format(d))
 
     # Call histoseg.process()
-    s = 'Passing control to histoseg.process\n'
+    s = '*********\tPassing control to histoseg.process\n'
     record_processing(kwargs['reportfile'], s)
 
     process_start = time.time()
@@ -291,7 +310,7 @@ def aggregate_scales(**kwargs):
 
     assembly_start = time.time()
     # Call reassemble.main()
-    s = '\tPassing control to reassemble.main()\n'
+    s = '*********\tPassing control to reassemble.main()\n'
     record_processing(kwargs['reportfile'], s)
     labels, colorized = reassemble.main(
         proj=kwargs['project'],
@@ -307,63 +326,134 @@ def aggregate_scales(**kwargs):
     return labels, colorized
 
 
-def convert_px2micron(px, conversion=5.0):
+def convert_px2micron(px, conversion=4.0):
     micron_sq = px / conversion
     return np.sqrt(micron_sq)
 
 
-def analyze_result(**kwargs):
+def get_px2um_factor(wsi, levelX):
+    if wsi.properties['aperio.AppMag'] == '40':
+        lvl0_factor = 0.25 
+    elif wsi.properties['aperio.AppMag'] == '20':
+        lvl0_factor = 0.5
+    else: 
+        raise Exception('OpenSlide or SVS file error')
+
+    lvl0_x = wsi.dimensions[1]
+    ratio = lvl0_x / levelX  # should be some power of 2
+
+    return lvl0_factor * ratio
+
+
+def generate_stats(**kwargs):
+    # Unprocessed = 0
     # Low grade index = 1
     # High grade index = 2
     # Benign index = 3
     # Stroma index = 4
-    stats = {'Cancer_area':0,
+
+    stats = {'Tissue_area':0,
+             'Cancer_area':0,
              'Low_grade_area':0,
-             'High_grade_area':0,
-             'Low_grade_percent':0,
-             'High_grade_percent':0,
-             'Tissue_area':0}
+             'High_grade_area':0}
     labels = kwargs['labels']
 
+    # Take care of me being stupid first:
+    process_map = kwargs['process_map']
+    process_map.dtype = np.uint8
+    if process_map.shape[:2] != labels.shape[:2]:
+        print 'ANALYSIS Resizing processmap to match labels'
+        process_map = cv2.resize(process_map, dsize=labels.shape[:2],
+            interpolation=cv2.INTER_NEAREST)
+
+    wsi = OpenSlide(kwargs['filename'])
+    conversion = get_px2um_factor(wsi, process_map.shape[0])
+
+    s = 'ANALYSIS: Factor for pixel to micron conversion: {} micron/pixel\n'.format(conversion)
+    record_processing(kwargs['reportfile'], s)
+
+    # Estimated total tissue:
+    tissue_area = process_map.sum()
+    stats['Tissue_area'] = tissue_area
+    s = 'ANALYSIS: Analyzed Area = {}\n'.format(tissue_area)
+    record_processing(kwargs['reportfile'], s)
+
     # Total cancer area
-    canc_area = np.add([(labels == 1).sum(),
-                        (labels == 2).sum()])
-    stats['Cancer_area'] = convert_px2micron(canc_area)
-    s = 'ANALYSIS: Cancer Area = {}\n'.format(canc_area)
+    cancer_area = np.add((labels == 1).sum(),
+                       (labels == 2).sum())
+    stats['Cancer_area'] = cancer_area
+    s = 'ANALYSIS: Cancer Area = {}\n'.format(cancer_area)
     record_processing(kwargs['reportfile'], s)
 
     # Grade areas
     low_grade_area = (labels == 1).sum()
     high_grade_area = (labels == 2).sum()
-    stats['Low_grade_area'] = convert_px2micron(low_grade_area)
-    stats['High_grade_area'] = convert_px2micron(high_grade_area)
+    stats['Low_grade_area'] = low_grade_area
+    stats['High_grade_area'] = high_grade_area
     s = 'ANALYSIS: Low Grade Area = {}\n'.format(low_grade_area)
     s = '{}ANALYSIS: High Grade Area = {}\n'.format(s, high_grade_area)
     record_processing(kwargs['reportfile'], s)
 
-    # Grade percentages
-    low_grade_percent = low_grade_area / float(canc_area)
-    high_grade_percent = high_grade_area / float(canc_area)
-    stats['Low_grade_percent'] = low_grade_percent
-    stats['High_grade_percent'] = high_grade_percent
-    s = 'ANALYSIS: Low Grade Percent = {}\n'.format(low_grade_percent)
-    s = '{}ANALYSIS: High Grade Percent = {}\n'.format(s, high_grade_percent)
-    record_processing(kwargs['reportfile'], s)
-
-    # Tissue area
-    tiss_area = np.add([(labels == 1).sum(),
-                        (labels == 2).sum(),
-                        (labels == 3).sum(),
-                        (labels == 4).sum()])
-    stats['Tissue_area'] = convert_px2micron(tiss_area)
-    s = 'ANALYSIS: Tissue Area = {}\n'.format(tiss_area)
-    record_processing(kwargs['reportfile'], s)
     return stats
 
 
+
+def build_stat_string(**kwargs):
+    # Constant header
+    header = ['Slide\nName', 'Processing\nTime (s)', 'Tissue Area',
+              'Tumor Area', 'Low Grade\n(%)', 'High Grade\n(%)']
+
+    # Lucky that data is just one row
+    slide_name = os.path.basename(kwargs['filename'])
+
+    # Processing time 
+    time_min = np.floor(kwargs['time_elapsed'] / 60)
+    time_sec = kwargs['time_elapsed'] % 60
+
+    stats = kwargs['stats']
+    # Areas as percentages
+    cancer_area = stats['Cancer_area']
+    low_grade_pct = stats['Low_grade_area'] / float(cancer_area)
+    high_grade_pct = stats['High_grade_area'] / float(cancer_area)
+
+    wsi = OpenSlide(kwargs['filename'])
+    process_map = kwargs['process_map']
+    conversion = get_px2um_factor(wsi, process_map.shape[0])
+
+    data = [[slide_name,
+             '{} min\n{:3.1f} s'.format(int(time_min), time_sec),
+             r'${:3.2f}\mu m^2$'.format(convert_px2micron(stats['Tissue_area'], conversion)),
+             r'${:3.2f}\mu m^2$'.format(convert_px2micron(cancer_area, conversion)),
+             r'${:3.2f} \%$'.format(low_grade_pct * 100),
+             r'${:3.2f} \%$'.format(high_grade_pct * 100),
+             ]]
+
+    return header, data
+
+
+
 def create_report(**kwargs):
-    time_elapsed = kwargs['time_elapsed']
-    pass
+    reportfile = os.path.join(kwargs['exp_home'], 'report.pdf')
+
+    # Options for the drawn figure
+    ax = plt.figure(dpi=300)
+    ax.add_subplot(111)
+    plt.tick_params(axis='both', which='both', bottom='off', top='off',
+                labelbottom='off', right='off', left='off', labelleft='off')
+
+    header, data = build_stat_string(
+        filename=kwargs['filename'],
+        time_elapsed=kwargs['time_elapsed'],
+        stats=kwargs['stats'],
+        process_map=kwargs['process_map']
+    )
+
+    tab = plt.table(cellText=data, colLabels=header, loc='top', cellLoc='center',
+                    bbox=[0, -0.2, 1, 0.175])
+
+    plt.imshow(kwargs['colorized'])
+    ax.savefig(reportfile, bbox_inches='tight')
+    plt.close()
 
 
 def main(**kwargs):
@@ -371,13 +461,17 @@ def main(**kwargs):
     # Pass each sub routine it's own little set of arguments
 
     time_all_start = time.time()
+
+    # exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
+    # reportfile = get_reportfile(exp_home)
+
     exp_home, reportfile = init_file_system(
         filename=kwargs['filename'],
         writeto=kwargs['writeto'],
         outputs=kwargs['outputs'],
         scales=kwargs['scales']
     )
-    #reportfile = os.path.join(exp_home, 'report.txt')
+
     print 'Recording run info to {}'.format(reportfile)
     repstr = 'Working on slide {}\n'.format(kwargs['filename'])
     record_processing(reportfile, repstr)
@@ -398,6 +492,8 @@ def main(**kwargs):
         exp_home=exp_home
     )
 
+
+    # # # In dev mode it's ok to just do this; it's pretty quick
     labels, colorized = aggregate_scales(
         project=kwargs['writeto'],
         filename=kwargs['filename'],
@@ -413,29 +509,38 @@ def main(**kwargs):
 
     # TODO (nathan) create some slide-level output
 
-    # analyze_result(
-    #     filename=kwargs['filename'],
-    #     exp_home=exp_home,
-    #     labels=labels,
-    #     colorized=colorized,
-    #     reportfile=reportfile
-    # )
+    stats = generate_stats(
+        filename=kwargs['filename'],
+        exp_home=exp_home,
+        labels=labels,
+        process_map=process_map,
+        reportfile=reportfile
+    )
+
+    create_report(
+        filename=kwargs['filename'],
+        exp_home=exp_home,
+        colorized=colorized,
+        time_elapsed=time_total_elapsed,
+        process_map=process_map,
+        stats=stats
+    )
 
 
 if __name__ == '__main__':
     # Take in or set args
     # These stay the same
-    scales = [512, 1024]
-    scale_weights = [2, 0.5]
+    scales = [384, 896]
+    scale_weights = [3, 0.25]
     weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
     writeto = '/home/nathan/histo-seg/pca/dev'
     outputs = [0,1,2,3,4]
 
-    # Filename changes
+    
     filename = sys.argv[1]
-    #filename = '/home/nathan/data/pca_wsi/1305400.svs'
+    # filename = '/home/nathan/data/pca_wsi/1305400.svs'
     main(filename=filename,
          scales=scales,
          scale_weights=scale_weights,
