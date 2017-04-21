@@ -716,9 +716,9 @@ def build_region(region,
         place_size = int(np.sqrt(((2**31) / 3) / (c * r)))
         print '\t{}'.format(place_size)
 
-    print '\tm is : {}'.format(m.shape)
+    # print '\tm is : {}'.format(m.shape)
     rows = partition_rows(m[y:y + r, x:x + c], r)
-    print '\tFound {} rows'.format(len(rows))
+    # print '\tFound {} rows'.format(len(rows))
 
     built_img = []  # Not really an image; a list of row images
     for ix, row in enumerate(rows):
@@ -727,8 +727,8 @@ def build_region(region,
 
     img = assemble_rows(built_img)
 
-    print '\tImage shape: {}'.format(img.shape)
-    print '\tExact shape: {}'.format(exactly)
+    # print '\tImage shape: {}'.format(img.shape)
+    # print '\tExact shape: {}'.format(exactly)
     if exactly is None:
         if img.shape[1] > max_w:
             img = downsize_keep_ratio(
@@ -740,7 +740,7 @@ def build_region(region,
 
     end_time = time.time()
     elapsed = (end_time - start_time)
-    print '\nTIME data.build_region time: {}'.format(elapsed)
+    # print '\nTIME data.build_region time: {}'.format(elapsed)
 
     return img
 

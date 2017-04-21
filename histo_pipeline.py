@@ -313,7 +313,7 @@ def aggregate_scales(**kwargs):
     # Call reassemble.main()
     s = '*********\tPassing control to reassemble.main()\n'
     record_processing(kwargs['reportfile'], s)
-    labels, colorized = reassemble.main(
+    labels, colorized, classimg = reassemble.main(
         proj=kwargs['project'],
         svs=kwargs['filename'],
         scales=kwargs['scales'],
@@ -324,7 +324,7 @@ def aggregate_scales(**kwargs):
     s = 'TIME Assembly elapsed = {}\n'.format(assembly_elapsed)
     record_processing(kwargs['reportfile'], s)
 
-    return labels, colorized
+    return labels, colorized, classimg
 
 
 def convert_px2micron(px, conversion=4.0):
@@ -432,7 +432,29 @@ def build_stat_string(**kwargs):
     return header, data
 
 
+def draw_class_images(classimg, exp_home):
+    ax = plt.figure(figsize=(5,9))
+    c_dict = {0: 'G3', 1: 'G4', 2: 'BN', 3: 'ST', 4: 'G5'}
+    nclass = classimg.shape[2]
+    for k in range(nclass):
+        c = classimg[:,:,k]
+        c = cv2.resize(c, dsize=(0,0), fx=0.5, fy=0.5,
+            interpolation=cv2.INTER_LINEAR)
 
+        plt.subplot(nclass, 2, k*2 + 1)
+        _ = plt.hist(c.ravel(), normed=1, bins=40)
+        plt.ylabel('frequency')
+        plt.xlabel('probability')
+
+        plt.subplot(nclass, 2, k*2 + 2)
+        plt.imshow(c, cmap='Greys')
+        plt.xticks([]), plt.yticks([])
+        plt.title('Class {}'.format(c_dict[k]))
+        plt.colorbar()
+
+    plt.savefig(os.path.join(exp_home, 'class_images.pdf'))
+
+    
 def create_report(**kwargs):
     reportfile = os.path.join(kwargs['exp_home'], 'report.pdf')
 
@@ -441,6 +463,8 @@ def create_report(**kwargs):
     ax.add_subplot(111)
     plt.tick_params(axis='both', which='both', bottom='off', top='off',
                 labelbottom='off', right='off', left='off', labelleft='off')
+
+    draw_class_images(kwargs['classimg'], kwargs['exp_home'])
 
     header, data = build_stat_string(
         filename=kwargs['filename'],
@@ -479,7 +503,7 @@ def main(**kwargs):
 
     process_map = preprocessing(
         filename=kwargs['filename'],
-        reportfile=reportfile,
+        reportfile=reportfile
     )
 
     process_multiscale(
@@ -495,7 +519,7 @@ def main(**kwargs):
 
 
     # # # In dev mode it's ok to just do this; it's pretty quick
-    labels, colorized = aggregate_scales(
+    labels, colorized, classimg = aggregate_scales(
         project=kwargs['writeto'],
         filename=kwargs['filename'],
         scales=kwargs['scales'],
@@ -524,28 +548,29 @@ def main(**kwargs):
         colorized=colorized,
         time_elapsed=time_total_elapsed,
         process_map=process_map,
-        stats=stats
+        stats=stats,
+        classimg=classimg
     )
 
 
 if __name__ == '__main__':
     # Take in or set args
     # These stay the same
-    scales = [384, 556, 896]
-    scale_weights = [3, 0.5, 0.25]
+    scales = [384, 896]
+    scale_weights = [3, 0.25]
     # scales = [384, 896]
     # scale_weights = [3, 0.25]
     weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.5/norm_iter_125000.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
-    # writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
-    writeto = '/home/nathan/histo-seg/pca/dev'
+    writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
+    #writeto = '/home/nathan/histo-seg/pca/dev'
     outputs = [0,1,2,3,4]
 
     
-    filename = sys.argv[1]
-    # filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
+    #filename = sys.argv[1]
+    filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
     # filename = '/home/nathan/data/pca_wsi/1305400.svs'
     main(filename=filename,
          scales=scales,
