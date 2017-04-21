@@ -31,7 +31,7 @@ def parse_dirs(scales, result_types=result_types):
     for res in result_types:
         retdict[res] = [d for d in dirlist if res in d]
 
-    print retdict
+    # print retdict
     return retdict
 
 
@@ -252,6 +252,31 @@ def aggregate_scales(imgs, kernel=None, weights=None):
         return cv2.morphologyEx(combo, cv2.MORPH_OPEN, kernel)
 
 
+def get_background(settings, rgb):
+    # Define background
+    # s0 = settings.keys()[0]
+    # tilemap = settings[s0][0]
+    # # tilemap = np.swapaxes(tilemap, 0,1)
+    # background = tilemap == 0
+    # background.dtype = np.uint8
+
+    # # This is one of the most confounding quirks ever:
+    # # For some reason, switch the 1st and 2nd elements of shape
+    # background = cv2.resize(background, dsize=(rgb.shape[1], rgb.shape[0]),
+    #     interpolation=cv2.INTER_NEAREST)
+
+
+    rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+    background = cv2.GaussianBlur(rgb, (7,7), 0)
+    bcg_level, background = cv2.threshold(background, 0, 255, 
+        cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))
+    background = cv2.morphologyEx(background, cv2.MORPH_OPEN, kernel)
+
+    background.dtype = np.bool
+    return background
+    #background = np.swapaxes(background, 0,1)  # ????
+
 
 def decision(classimg, svs, svs_level, colors, settings):
     # The main thing this function does now is to load the rgb
@@ -267,19 +292,7 @@ def decision(classimg, svs, svs_level, colors, settings):
     # -- Also have to change it somewhere else, idk where
     rgb = cv2.resize(rgb, dsize=(0,0), fx=0.5, fy=0.5)
 
-    # Define background
-    s0 = settings.keys()[0]
-    tilemap = settings[s0][0]
-    # tilemap = np.swapaxes(tilemap, 0,1)
-    background = tilemap == 0
-    background.dtype = np.uint8
-
-    # This is one of the most confounding quirks ever:
-    # For some reason, switch the 1st and 2nd elements of shape
-    background = cv2.resize(background, dsize=(rgb.shape[1], rgb.shape[0]),
-        interpolation=cv2.INTER_NEAREST)
-    background.dtype = np.bool
-    #background = np.swapaxes(background, 0,1)  # ????
+    background = get_background(settings, rgb)
 
     labelmask = np.argmax(classimg, axis=2) + 1
     labelmask[background] = 0
@@ -298,7 +311,6 @@ def decision(classimg, svs, svs_level, colors, settings):
         rgb = cv2.resize(rgb, dsize=(tt[1], tt[0]))
 
     #colorimg = data.overlay_colors(rgb, labelmask)
-
     colored_label = impose_colors(labelmask, colors)
     colorimg = data.overlay_colors(rgb, colored_label)
 

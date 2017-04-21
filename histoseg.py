@@ -12,9 +12,9 @@ import inspect
 import numpy as np
 import generate_color
 
-CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
-sys.path.insert(0, CAFFE_ROOT + "/python")
-import caffe
+# CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+# sys.path.insert(0, CAFFE_ROOT + "/python")
+# import caffe
 import time
 # Define inspection code that spits out the line it's called from (as str)
 
@@ -131,6 +131,10 @@ def get_output(d, pred, out, colors):
 
 
 def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportfile='./log.txt'):
+    CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+    sys.path.insert(0, CAFFE_ROOT + "/python")
+    import caffe
+
     # Force dest to be a list
     start_time = time.time()
     if isinstance(expdirs[1:], basestring):

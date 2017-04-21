@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python
 
 import data
 import histoseg
@@ -100,20 +100,20 @@ def init_file_system(**kwargs):
 
 def whitespace(img, reportfile, white_pt=210):
     # Simple. Could be more sophisticated
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    background = cv2.GaussianBlur(img, (7,7), 0)
+    bcg_level, background = cv2.threshold(background, 0, 255, 
+        cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))
+    background = cv2.morphologyEx(background, cv2.MORPH_OPEN, kernel)
 
-    white = gray > white_pt
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    white.dtype = np.uint8
-    white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, kernel)
-    white.dtype = np.bool
+    background.dtype = np.bool
 
     s = 'Found {} px above grayscale value {}\n'.format(
-        white.sum(), white_pt
+        background.sum(), bcg_level
     )
     record_processing(reportfile, s)
 
-    return white
+    return background
 
 
 def read_region(wsi, start, level, dims):
@@ -339,7 +339,7 @@ def get_px2um_factor(wsi, levelX):
     else: 
         raise Exception('OpenSlide or SVS file error')
 
-    lvl0_x = wsi.dimensions[1]
+    lvl0_x = wsi.dimensions[0]
     ratio = lvl0_x / levelX  # should be some power of 2
 
     return lvl0_factor * ratio
@@ -462,35 +462,35 @@ def main(**kwargs):
 
     time_all_start = time.time()
 
-    # exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
-    # reportfile = get_reportfile(exp_home)
+    exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
+    reportfile = get_reportfile(exp_home)
 
-    exp_home, reportfile = init_file_system(
-        filename=kwargs['filename'],
-        writeto=kwargs['writeto'],
-        outputs=kwargs['outputs'],
-        scales=kwargs['scales']
-    )
+    # exp_home, reportfile = init_file_system(
+    #     filename=kwargs['filename'],
+    #     writeto=kwargs['writeto'],
+    #     outputs=kwargs['outputs'],
+    #     scales=kwargs['scales']
+    # )
 
-    print 'Recording run info to {}'.format(reportfile)
-    repstr = 'Working on slide {}\n'.format(kwargs['filename'])
-    record_processing(reportfile, repstr)
+    # print 'Recording run info to {}'.format(reportfile)
+    # repstr = 'Working on slide {}\n'.format(kwargs['filename'])
+    # record_processing(reportfile, repstr)
 
     process_map = preprocessing(
         filename=kwargs['filename'],
         reportfile=reportfile,
     )
 
-    process_multiscale(
-        filename=kwargs['filename'],
-        scales=kwargs['scales'],
-        weights=kwargs['weights'],
-        outputs=kwargs['outputs'],
-        model_template=kwargs['model_template'],
-        reportfile=reportfile,
-        process_map=process_map,
-        exp_home=exp_home
-    )
+    # process_multiscale(
+    #     filename=kwargs['filename'],
+    #     scales=kwargs['scales'],
+    #     weights=kwargs['weights'],
+    #     outputs=kwargs['outputs'],
+    #     model_template=kwargs['model_template'],
+    #     reportfile=reportfile,
+    #     process_map=process_map,
+    #     exp_home=exp_home
+    # )
 
 
     # # # In dev mode it's ok to just do this; it's pretty quick
@@ -535,11 +535,13 @@ if __name__ == '__main__':
     weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
-    writeto = '/home/nathan/histo-seg/pca/dev'
+    writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
+    # writeto = '/home/nathan/histo-seg/pca/dev'
     outputs = [0,1,2,3,4]
 
     
-    filename = sys.argv[1]
+    #filename = sys.argv[1]
+    filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
     # filename = '/home/nathan/data/pca_wsi/1305400.svs'
     main(filename=filename,
          scales=scales,
