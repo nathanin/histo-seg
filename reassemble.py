@@ -204,9 +204,12 @@ def rebuild(settings, dir_set, r):
             exactly=target_dim)
 
         region = place_padding(region, svs_low)
+
         cv2.imwrite(filename=writename, img=region)
+
         if len(region.shape) == 3:
-            region = region[:,:,0]
+            region = cv2.cvtColor(region, cv2.COLOR_RGB2GRAY)
+            #region = region[:,:,0]
         scaleimgs.append(region)
 
     end_time = time.time()
@@ -246,8 +249,10 @@ def aggregate_scales(imgs, kernel=None, weights=None):
     print '\nTIME reassemble.aggregate_scales time: {}'.format(elapsed)
 
     if kernel is None:
+        combo = cv2.GaussianBlur(combo, (7,7), 0)
         return combo
     else:
+        combo = cv2.GaussianBlur(combo, (7,7), 0)
         combo = cv2.morphologyEx(combo, cv2.MORPH_CLOSE, kernel)
         return cv2.morphologyEx(combo, cv2.MORPH_OPEN, kernel)
 
@@ -278,7 +283,42 @@ def get_background(settings, rgb):
     #background = np.swapaxes(background, 0,1)  # ????
 
 
-def decision(classimg, svs, svs_level, colors, settings):
+
+def class_probs2labels(classimg, background=None, mode='argmax'):
+    if mode == 'argmax':
+        labelmask = np.argmax(classimg, axis=2) + 1
+
+    elif mode == 'overlay':
+        # Make a positive mask for each layer, decide:
+        # G3 --> High Grade --> Benign --> Stroma
+        # label_list = [cv2.cvtColor(classimg[:,:,x], cv2.COLOR_RGB2GRAY)
+        #               for x in range(classimg.shape[2])]
+        # label_list = [cv2.threshold(L, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        #               for L in label_list]
+        # label_list = [cv2.threshold(classimg[:,:,L], 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        #               for L in range(classimg.shape[2])] 
+        # label_list = [cv2.threshold(classimg[:,:,x], 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        #               for x in range(classimg.shape[2])]
+
+        labelmask = np.zeros(shape=label_list[0].shape, dtype=np.uint8)
+        for k, L in enumerate(label_list):
+            labelmask[L] = k+1
+
+    if background is not None:
+        if background.shape[:2] != labelmask.shape[:2]:
+            x, y = labelmask.shape[:2]
+            background.dtype = np.uint8
+            background = cv2.resize(background, shape=(y, x),
+                interpolation=cv2.INTER_NEAREST)
+            background.dtype = np.bool
+
+        labelmask[background] = 0
+
+    return labelmask
+
+
+
+def get_decision(classimg, svs, svs_level, colors, settings):
     # The main thing this function does now is to load the rgb
     # Load up RGB image
     rgb = svs.read_region(
@@ -294,8 +334,9 @@ def decision(classimg, svs, svs_level, colors, settings):
 
     background = get_background(settings, rgb)
 
-    labelmask = np.argmax(classimg, axis=2) + 1
-    labelmask[background] = 0
+    labelmask = class_probs2labels(classimg, background=background, mode='argmax')
+    # labelmask = np.argmax(classimg, axis=2) + 1
+    # labelmask[background] = 0
 
     # Reassign Grade 5 to Grade 4. Re-label "high grade"
     # TODO (nathan) fix magic numbers !!!
@@ -416,7 +457,7 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = [0,4], reportfile 
     cv2.imwrite(filename='dev_rgba.png', img=classimg[:,:,:4])
 
     # Make decisions and overlay discrete classes
-    labelimage, colorimg = decision(classimg, svs, svs_level, colors, settings)
+    labelimage, colorimg = get_decision(classimg, svs, svs_level, colors, settings)
 
     repf.close()
     write_class_stats(labelimage, reportfile)
