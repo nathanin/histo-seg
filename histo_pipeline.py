@@ -100,6 +100,7 @@ def init_file_system(**kwargs):
 
 def whitespace(img, reportfile, white_pt=210):
     # Simple. Could be more sophisticated
+    img = cv2.cvtColor(img, cv2.RGB2GRAY)
     background = cv2.GaussianBlur(img, (7,7), 0)
     bcg_level, background = cv2.threshold(background, 0, 255, 
         cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -536,8 +537,8 @@ if __name__ == '__main__':
                '/home/nathan/semantic-pca/weights/seg_0.5/norm_iter_125000.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
-    writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
-    # writeto = '/home/nathan/histo-seg/pca/dev'
+    #writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
+    writeto = '/home/nathan/histo-seg/pca/dev'
     outputs = [0,1,2,3,4]
 
     
