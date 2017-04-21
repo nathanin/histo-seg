@@ -530,9 +530,10 @@ def main(**kwargs):
 if __name__ == '__main__':
     # Take in or set args
     # These stay the same
-    scales = [384, 896]
-    scale_weights = [3, 0.25]
+    scales = [384, 556, 896]
+    scale_weights = [3, 0.5, 0.25]
     weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
+               '/home/nathan/semantic-pca/weights/seg_0.5/norm_iter_125000.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
     writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
@@ -540,8 +541,8 @@ if __name__ == '__main__':
     outputs = [0,1,2,3,4]
 
     
-    #filename = sys.argv[1]
-    filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
+    filename = sys.argv[1]
+    #filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
     # filename = '/home/nathan/data/pca_wsi/1305400.svs'
     main(filename=filename,
          scales=scales,

@@ -105,6 +105,7 @@ def impose_colors(label, colors):
 
 def get_output(d, pred, out, colors):
     # TODO Add support for BATCHSIZE > 1
+    # UPGRADE all options except "prob" are outdated 
 
     if "result" in d:
         labels = np.argmax(out, axis=0)
@@ -117,7 +118,12 @@ def get_output(d, pred, out, colors):
         # 1. "prob" is in front &&
         # 2. there are only single digit number of classes.
         # TODO replace with regex
-        x = out[layer, :, :] * 255
+        try:
+            x = out[layer, :, :] * 255
+        except:
+            # There is no corresponding output layer
+            # TODO how to use warning()
+            x = np.zeros(shape=(256,256), dtype=np.float64) + 0.5
 
     elif d == "label":
         ## Same as probability; might have to add an argument
