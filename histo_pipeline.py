@@ -100,7 +100,7 @@ def init_file_system(**kwargs):
 
 def whitespace(img, reportfile, white_pt=210):
     # Simple. Could be more sophisticated
-    img = cv2.cvtColor(img, cv2.RGB2GRAY)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     background = cv2.GaussianBlur(img, (7,7), 0)
     bcg_level, background = cv2.threshold(background, 0, 255, 
         cv2.THRESH_BINARY + cv2.THRESH_OTSU)
