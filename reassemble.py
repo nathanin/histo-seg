@@ -429,7 +429,7 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = [0,4], reportfile 
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     colors = generate_color.generate(
-        n=len(result_types), whiteidx=ignorelabel, cmap='brg')
+        n=len(result_types), whiteidx=ignorelabel, cmap='jet')
 
     repstr = 'COLORS:'
     for k in range(colors.shape[0]):
@@ -480,7 +480,7 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = [0,4], reportfile 
     repf.write('TIME REASSEMBLY {}\n'.format(elapsed))
     repf.close()
 
-    return labelimage, cv2.cvtColor(colorimg, cv2.COLOR_BGR2RGB)
+    return labelimage, cv2.cvtColor(colorimg, cv2.COLOR_BGR2RGB), classimg
 
 
 if __name__ == '__main__':
