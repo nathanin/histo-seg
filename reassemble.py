@@ -480,7 +480,7 @@ def main(proj, svs, scales, scale_weights=None, ignorelabel = [0,4], reportfile 
     repf.write('TIME REASSEMBLY {}\n'.format(elapsed))
     repf.close()
 
-    return labelimage, cv2.cvtColor(colorimg, cv2.COLOR_BGR2RGB), classimg
+    return labelimage, cv2.cvtColor(colorimg, cv2.COLOR_BGR2RGB), classimg, colors
 
 
 if __name__ == '__main__':
