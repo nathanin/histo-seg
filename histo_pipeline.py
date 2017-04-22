@@ -453,18 +453,21 @@ def draw_class_images(classimg, exp_home):
         plt.colorbar()
 
     plt.savefig(os.path.join(exp_home, 'class_images.pdf'))
+    plt.close()
 
     
 def create_report(**kwargs):
     reportfile = os.path.join(kwargs['exp_home'], 'report.pdf')
 
+    draw_class_images(kwargs['classimg'], kwargs['exp_home'])
+    
     # Options for the drawn figure
     ax = plt.figure(dpi=300)
     ax.add_subplot(111)
     plt.tick_params(axis='both', which='both', bottom='off', top='off',
                 labelbottom='off', right='off', left='off', labelleft='off')
 
-    draw_class_images(kwargs['classimg'], kwargs['exp_home'])
+    #draw_class_images(kwargs['classimg'], kwargs['exp_home'])
 
     header, data = build_stat_string(
         filename=kwargs['filename'],
@@ -490,12 +493,12 @@ def main(**kwargs):
     exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
     reportfile = get_reportfile(exp_home)
 
-    exp_home, reportfile = init_file_system(
-        filename=kwargs['filename'],
-        writeto=kwargs['writeto'],
-        outputs=kwargs['outputs'],
-        scales=kwargs['scales']
-    )
+    # exp_home, reportfile = init_file_system(
+    #     filename=kwargs['filename'],
+    #     writeto=kwargs['writeto'],
+    #     outputs=kwargs['outputs'],
+    #     scales=kwargs['scales']
+    # )
 
     print 'Recording run info to {}'.format(reportfile)
     repstr = 'Working on slide {}\n'.format(kwargs['filename'])
@@ -506,16 +509,16 @@ def main(**kwargs):
         reportfile=reportfile
     )
 
-    process_multiscale(
-        filename=kwargs['filename'],
-        scales=kwargs['scales'],
-        weights=kwargs['weights'],
-        outputs=kwargs['outputs'],
-        model_template=kwargs['model_template'],
-        reportfile=reportfile,
-        process_map=process_map,
-        exp_home=exp_home
-    )
+    # process_multiscale(
+    #     filename=kwargs['filename'],
+    #     scales=kwargs['scales'],
+    #     weights=kwargs['weights'],
+    #     outputs=kwargs['outputs'],
+    #     model_template=kwargs['model_template'],
+    #     reportfile=reportfile,
+    #     process_map=process_map,
+    #     exp_home=exp_home
+    # )
 
 
     # # # In dev mode it's ok to just do this; it's pretty quick
@@ -556,21 +559,21 @@ def main(**kwargs):
 if __name__ == '__main__':
     # Take in or set args
     # These stay the same
-    scales = [384, 896]
-    scale_weights = [3, 0.25]
+    scales = [384, 512, 896]
+    scale_weights = [3, 0.5, 0.25]
     # scales = [384, 896]
     # scale_weights = [3, 0.25]
     weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.5/norm_iter_125000.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
-    writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
-    #writeto = '/home/nathan/histo-seg/pca/dev'
+    #writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
+    writeto = '/home/nathan/histo-seg/pca/dev'
     outputs = [0,1,2,3,4]
 
     
-    #filename = sys.argv[1]
-    filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
+    filename = sys.argv[1]
+    #filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
     # filename = '/home/nathan/data/pca_wsi/1305400.svs'
     main(filename=filename,
          scales=scales,

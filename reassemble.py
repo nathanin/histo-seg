@@ -308,7 +308,7 @@ def class_probs2labels(classimg, background=None, mode='argmax'):
         if background.shape[:2] != labelmask.shape[:2]:
             x, y = labelmask.shape[:2]
             background.dtype = np.uint8
-            background = cv2.resize(background, shape=(y, x),
+            background = cv2.resize(background, dsize=(y, x),
                 interpolation=cv2.INTER_NEAREST)
             background.dtype = np.bool
 
