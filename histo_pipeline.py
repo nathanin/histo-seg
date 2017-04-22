@@ -17,6 +17,7 @@ from openslide import OpenSlide
 
 # For making reports
 from matplotlib import pyplot as plt
+from matplotlib.table import Table
 from matplotlib import rcParams
 import pandas as pd
 
@@ -308,23 +309,23 @@ def process_multiscale(**kwargs):
 
 def aggregate_scales(**kwargs):
     # Reassemble the processed images from multiple scales
-
     assembly_start = time.time()
     # Call reassemble.main()
     s = '*********\tPassing control to reassemble.main()\n'
     record_processing(kwargs['reportfile'], s)
-    labels, colorized, classimg = reassemble.main(
+    labels, colorized, classimg, colormap = reassemble.main(
         proj=kwargs['project'],
         svs=kwargs['filename'],
         scales=kwargs['scales'],
-        scale_weights=kwargs['scale_weights'])
+        scale_weights=kwargs['scale_weights']
+    )
 
     assembly_end = time.time()
     assembly_elapsed = (assembly_end - assembly_start)
     s = 'TIME Assembly elapsed = {}\n'.format(assembly_elapsed)
     record_processing(kwargs['reportfile'], s)
 
-    return labels, colorized, classimg
+    return labels, colorized, classimg, colormap
 
 
 def convert_px2micron(px, conversion=4.0):
@@ -441,6 +442,7 @@ def draw_class_images(classimg, exp_home):
         c = cv2.resize(c, dsize=(0,0), fx=0.5, fy=0.5,
             interpolation=cv2.INTER_LINEAR)
 
+
         plt.subplot(nclass, 2, k*2 + 1)
         _ = plt.hist(c.ravel(), normed=1, bins=40)
         plt.ylabel('frequency')
@@ -458,12 +460,13 @@ def draw_class_images(classimg, exp_home):
     
 def create_report(**kwargs):
     reportfile = os.path.join(kwargs['exp_home'], 'report.pdf')
+    colors = kwargs['colors']
 
     draw_class_images(kwargs['classimg'], kwargs['exp_home'])
     
     # Options for the drawn figure
-    ax = plt.figure(dpi=300)
-    ax.add_subplot(111)
+    fig, ax = plt.subplots()
+    # ax.add_subplot(111)
     plt.tick_params(axis='both', which='both', bottom='off', top='off',
                 labelbottom='off', right='off', left='off', labelleft='off')
 
@@ -477,10 +480,27 @@ def create_report(**kwargs):
     )
 
     tab = plt.table(cellText=data, colLabels=header, loc='top', cellLoc='center',
-                    bbox=[0, -0.2, 1, 0.175])
+                    bbox=[00, -0.38, 1, 0.18])
 
+    # header = ['G3', 'G4', 'BN', 'ST', 'G5']
+    tb = Table(ax, bbox=[0, -0.17, 1, 0.04])
+    tb.add_cell(1, 1, 1/5.0, 1/5.0, facecolor=colors[0,:]/255.0)
+    tb.add_cell(1, 2, 1/5.0, 1/5.0, facecolor=colors[1,:]/255.0)
+    tb.add_cell(1, 3, 1/5.0, 1/5.0, facecolor=colors[2,:]/255.0)
+    tb.add_cell(1, 4, 1/5.0, 1/5.0, facecolor=colors[3,:]/255.0)
+    tb.add_cell(1, 5, 1/5.0, 1/5.0, facecolor=colors[4,:]/255.0)
+    # tb.add_cell(1, 6, 1/6.0, 1/6.0, facecolor=colors[5,:]/255.0)
+
+    tb.add_cell(-1, 1, 1/5.0, 1/5.0, text='BG', loc='center', edgecolor='none', facecolor='none')
+    tb.add_cell(-1, 2, 1/5.0, 1/5.0, text='Low Grade', loc='center', edgecolor='none', facecolor='none')
+    tb.add_cell(-1, 3, 1/5.0, 1/5.0, text='High Grade', loc='center', edgecolor='none', facecolor='none')
+    tb.add_cell(-1, 4, 1/5.0, 1/5.0, text='BN', loc='center', edgecolor='none', facecolor='none')
+    tb.add_cell(-1, 5, 1/5.0, 1/5.0, text='ST', loc='center', edgecolor='none', facecolor='none')
+    # tb.add_cell(-1, 6, 1/6.0, 1/6.0, text='G5', loc='center', edgecolor='none', facecolor='none')
+
+    ax.add_table(tb)
     plt.imshow(kwargs['colorized'])
-    ax.savefig(reportfile, bbox_inches='tight')
+    fig.savefig(reportfile, bbox_inches='tight')
     plt.close()
 
 
@@ -520,9 +540,8 @@ def main(**kwargs):
     #     exp_home=exp_home
     # )
 
-
     # # # In dev mode it's ok to just do this; it's pretty quick
-    labels, colorized, classimg = aggregate_scales(
+    labels, colorized, classimg, colormap = aggregate_scales(
         project=kwargs['writeto'],
         filename=kwargs['filename'],
         scales=kwargs['scales'],
@@ -552,7 +571,8 @@ def main(**kwargs):
         time_elapsed=time_total_elapsed,
         process_map=process_map,
         stats=stats,
-        classimg=classimg
+        classimg=classimg,
+        colors=colormap
     )
 
 
