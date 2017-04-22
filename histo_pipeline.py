@@ -466,6 +466,7 @@ def create_report(**kwargs):
     
     # Options for the drawn figure
     fig, ax = plt.subplots()
+    fig.set_dpi(450)
     # ax.add_subplot(111)
     plt.tick_params(axis='both', which='both', bottom='off', top='off',
                 labelbottom='off', right='off', left='off', labelleft='off')
