@@ -514,12 +514,12 @@ def main(**kwargs):
     exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
     reportfile = get_reportfile(exp_home)
 
-    exp_home, reportfile = init_file_system(
-        filename=kwargs['filename'],
-        writeto=kwargs['writeto'],
-        outputs=kwargs['outputs'],
-        scales=kwargs['scales']
-    )
+    # exp_home, reportfile = init_file_system(
+    #     filename=kwargs['filename'],
+    #     writeto=kwargs['writeto'],
+    #     outputs=kwargs['outputs'],
+    #     scales=kwargs['scales']
+    # )
 
     print 'Recording run info to {}'.format(reportfile)
     repstr = 'Working on slide {}\n'.format(kwargs['filename'])
@@ -530,16 +530,16 @@ def main(**kwargs):
         reportfile=reportfile
     )
 
-    process_multiscale(
-        filename=kwargs['filename'],
-        scales=kwargs['scales'],
-        weights=kwargs['weights'],
-        outputs=kwargs['outputs'],
-        model_template=kwargs['model_template'],
-        reportfile=reportfile,
-        process_map=process_map,
-        exp_home=exp_home
-    )
+    # process_multiscale(
+    #     filename=kwargs['filename'],
+    #     scales=kwargs['scales'],
+    #     weights=kwargs['weights'],
+    #     outputs=kwargs['outputs'],
+    #     model_template=kwargs['model_template'],
+    #     reportfile=reportfile,
+    #     process_map=process_map,
+    #     exp_home=exp_home
+    # )
 
     # # # In dev mode it's ok to just do this; it's pretty quick
     labels, colorized, classimg, colormap = aggregate_scales(
