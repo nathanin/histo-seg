@@ -333,7 +333,7 @@ def convert_px2micron(px, conversion=4.0):
     return np.sqrt(micron_sq)
 
 
-def get_px2um_factor(wsi, levelX):
+def px2um_factor(wsi, levelX):
     if wsi.properties['aperio.AppMag'] == '40':
         lvl0_factor = 0.25 
     elif wsi.properties['aperio.AppMag'] == '20':
@@ -369,7 +369,7 @@ def generate_stats(**kwargs):
             interpolation=cv2.INTER_NEAREST)
 
     wsi = OpenSlide(kwargs['filename'])
-    conversion = get_px2um_factor(wsi, process_map.shape[0])
+    conversion = px2um_factor(wsi, process_map.shape[0])
 
     s = 'ANALYSIS: Factor for pixel to micron conversion: {} micron/pixel\n'.format(conversion)
     record_processing(kwargs['reportfile'], s)
@@ -420,7 +420,7 @@ def build_stat_string(**kwargs):
 
     wsi = OpenSlide(kwargs['filename'])
     process_map = kwargs['process_map']
-    conversion = get_px2um_factor(wsi, process_map.shape[0])
+    conversion = px2um_factor(wsi, process_map.shape[0])
 
     data = [[slide_name,
              '{} min\n{:3.1f} s'.format(int(time_min), time_sec),
@@ -442,7 +442,6 @@ def draw_class_images(classimg, exp_home):
         c = cv2.resize(c, dsize=(0,0), fx=0.5, fy=0.5,
             interpolation=cv2.INTER_LINEAR)
 
-
         plt.subplot(nclass, 2, k*2 + 1)
         _ = plt.hist(c.ravel(), normed=1, bins=40)
         plt.ylabel('frequency')
@@ -457,21 +456,64 @@ def draw_class_images(classimg, exp_home):
     plt.savefig(os.path.join(exp_home, 'class_images.pdf'))
     plt.close()
 
+
+def imgs_to_plot(background, img):
+    # make background 0 where there is __no tissue__
+    background.dtype = np.uint8
+    # If backgorund is too small, resize it.
+    if background.shape != img.shape:
+        ix = img.shape[1]
+        iy = img.shape[0]
+        background = cv2.resize(background, dsize=(ix, iy))
+
+    # Threshold should be some % of the image size
+    # Get the threshold in terms of um^2 
+    regions = data.get_all_regions(background, threshold=450**2)
+
+    def cutout_region(reg):
+        x = reg[0]
+        y = reg[1]
+        dx = x+reg[2]
+        dy = y+reg[3]
+        print 'Returning region {}:{} {}:{}'.format(x,dx, y,dy)
+        return img[y:dy, x:dx, :]
+
+    regions = [cutout_region(reg) for reg in regions]
+
+    return regions
     
+
 def create_report(**kwargs):
+    draw_class_images(kwargs['classimg'], kwargs['exp_home'])
     reportfile = os.path.join(kwargs['exp_home'], 'report.pdf')
     colors = kwargs['colors']
 
-    draw_class_images(kwargs['classimg'], kwargs['exp_home'])
-    
-    # Options for the drawn figure
-    fig, ax = plt.subplots()
-    fig.set_dpi(450)
-    # ax.add_subplot(111)
-    plt.tick_params(axis='both', which='both', bottom='off', top='off',
-                labelbottom='off', right='off', left='off', labelleft='off')
+    regions = imgs_to_plot(kwargs['process_map'], kwargs['colorized'])
 
-    #draw_class_images(kwargs['classimg'], kwargs['exp_home'])
+
+    # Options for the drawn figure
+    nreg = len(regions)
+    # ax = plt.figure(dpi=300)
+    fig, ax = plt.subplots(nreg, 1, figsize=(5, 13))
+    # fig.
+    # plt.tick_params(axis='both', which='both', bottom='off', top='off',
+    #             labelbottom='off', right='off', left='off', labelleft='off')
+    # fig, ax = plt.subplots(nreg+1, 1)
+    # fig.set_dpi(450)
+
+    if nreg == 1:
+        active_ax = ax
+        active_ax.imshow(regions[0])
+        active_ax.tick_params(axis='both', which='both', bottom='off', top='off',
+                labelbottom='off', right='off', left='off', labelleft='off')
+    else: 
+        for k, reg in enumerate(regions):
+            active_ax = ax[k]
+            active_ax.imshow(reg)
+            active_ax.tick_params(axis='both', which='both', bottom='off', top='off',
+                    labelbottom='off', right='off', left='off', labelleft='off')
+            # active_ax.imshow(reg)
+
 
     header, data = build_stat_string(
         filename=kwargs['filename'],
@@ -484,7 +526,7 @@ def create_report(**kwargs):
                     bbox=[00, -0.38, 1, 0.18])
 
     # header = ['G3', 'G4', 'BN', 'ST', 'G5']
-    tb = Table(ax, bbox=[0, -0.17, 1, 0.04])
+    tb = Table(active_ax, bbox=[0, -0.17, 1, 0.04])
     tb.add_cell(1, 1, 1/5.0, 1/5.0, facecolor=colors[0,:]/255.0)
     tb.add_cell(1, 2, 1/5.0, 1/5.0, facecolor=colors[1,:]/255.0)
     tb.add_cell(1, 3, 1/5.0, 1/5.0, facecolor=colors[2,:]/255.0)
@@ -499,9 +541,11 @@ def create_report(**kwargs):
     tb.add_cell(-1, 5, 1/5.0, 1/5.0, text='ST', loc='center', edgecolor='none', facecolor='none')
     # tb.add_cell(-1, 6, 1/6.0, 1/6.0, text='G5', loc='center', edgecolor='none', facecolor='none')
 
-    ax.add_table(tb)
-    plt.imshow(kwargs['colorized'])
-    fig.savefig(reportfile, bbox_inches='tight')
+    active_ax.add_table(tb)
+    # plt.tick_params(axis='both', which='both', bottom='off', top='off',
+    #                 labelbottom='off', right='off', left='off', labelleft='off')
+    # plt.imshow(kwargs['colorized'])
+    plt.savefig(reportfile, bbox_inches='tight')
     plt.close()
 
 
