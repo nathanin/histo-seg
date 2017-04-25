@@ -7,6 +7,7 @@ import reassemble
 import os
 import glob
 import time
+import datetime
 import shutil
 import sys
 
@@ -19,6 +20,7 @@ from openslide import OpenSlide
 from matplotlib import pyplot as plt
 from matplotlib.table import Table
 from matplotlib import rcParams
+from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 
 rcParams.update({'figure.autolayout': True})
@@ -101,8 +103,8 @@ def init_file_system(**kwargs):
 
 def whitespace(img, reportfile, white_pt=210):
     # Simple. Could be more sophisticated
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    background = cv2.GaussianBlur(img, (7,7), 0)
+    background = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    # background = cv2.GaussianBlur(img, (7,7), 0)
     bcg_level, background = cv2.threshold(background, 0, 255, 
         cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))
@@ -400,38 +402,6 @@ def generate_stats(**kwargs):
 
 
 
-def build_stat_string(**kwargs):
-    # Constant header
-    header = ['Slide\nName', 'Processing\nTime (s)', 'Tissue Area',
-              'Tumor Area', 'Low Grade\n(%)', 'High Grade\n(%)']
-
-    # Lucky that data is just one row
-    slide_name = os.path.basename(kwargs['filename'])
-
-    # Processing time 
-    time_min = np.floor(kwargs['time_elapsed'] / 60)
-    time_sec = kwargs['time_elapsed'] % 60
-
-    stats = kwargs['stats']
-    # Areas as percentages
-    cancer_area = stats['Cancer_area']
-    low_grade_pct = stats['Low_grade_area'] / float(cancer_area)
-    high_grade_pct = stats['High_grade_area'] / float(cancer_area)
-
-    wsi = OpenSlide(kwargs['filename'])
-    process_map = kwargs['process_map']
-    conversion = px2um_factor(wsi, process_map.shape[0])
-
-    data = [[slide_name,
-             '{} min\n{:3.1f} s'.format(int(time_min), time_sec),
-             r'${:3.2f}\mu m^2$'.format(convert_px2micron(stats['Tissue_area'], conversion)),
-             r'${:3.2f}\mu m^2$'.format(convert_px2micron(cancer_area, conversion)),
-             r'${:3.2f} \%$'.format(low_grade_pct * 100),
-             r'${:3.2f} \%$'.format(high_grade_pct * 100),
-             ]]
-
-    return header, data
-
 
 def draw_class_images(classimg, exp_home):
     ax = plt.figure(figsize=(5,9))
@@ -457,96 +427,183 @@ def draw_class_images(classimg, exp_home):
     plt.close()
 
 
-def imgs_to_plot(background, img):
+def imgs_to_plot(img):
     # make background 0 where there is __no tissue__
-    background.dtype = np.uint8
-    # If backgorund is too small, resize it.
-    if background.shape != img.shape:
-        ix = img.shape[1]
-        iy = img.shape[0]
-        background = cv2.resize(background, dsize=(ix, iy))
+    background = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    # background = cv2.GaussianBlur(background, (7,7), 0)
+    bcg_level, background = cv2.threshold(background, 0, 255, 
+        cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    background = cv2.morphologyEx(background, cv2.MORPH_CLOSE, kernel)
+    background = 255- background
 
-    # Threshold should be some % of the image size
-    # Get the threshold in terms of um^2 
-    regions = data.get_all_regions(background, threshold=450**2)
+    # Reimplement data.get_all_regions, except do it better
+    contours = []
+    cntrs,x = cv2.findContours(image=background, mode=cv2.RETR_EXTERNAL,
+                           method=cv2.CHAIN_APPROX_SIMPLE)
 
-    def cutout_region(reg):
-        x = reg[0]
-        y = reg[1]
-        dx = x+reg[2]
-        dy = y+reg[3]
-        print 'Returning region {}:{} {}:{}'.format(x,dx, y,dy)
-        return img[y:dy, x:dx, :]
+    # Make sure there's at least one:
+    n = 200
+    while len(contours) == 0:
+        thrsh = n ** 2
+        for cc in cntrs:
+            if cv2.contourArea(cc) > thrsh:
+                contours.append(cc)
 
-    regions = [cutout_region(reg) for reg in regions]
+        n -= 50
 
-    return regions
+    def cutout_region(cc):
+        bbox = cv2.boundingRect(cc)
+        area = cv2.contourArea(cc)
+        x = bbox[0]
+        y = bbox[1]
+        dx = x+bbox[2]
+        dy = y+bbox[3]
+        simg = img[y:dy, x:dx, :]
+
+        ### If rows > cols, flip it:
+        rows, cols = simg.shape[:2]
+        if rows > cols:
+        #     # M = cv2.getRotationMatrix2D((rows/2, cols/2), 90, 1)
+        #     # simg = cv2.warpAffine(simg, M, (cols, rows))
+
+        #     # For 90deg use transpose
+        #     # Can't use simg.T since it's 3-channel
+            simg = np.swapaxes(simg,0,1)
+
+        return simg, area
+
+    regions, areas = zip(*(cutout_region(cc) for cc in contours))
+
+    # Sort by cols
+    def sort_regions(regions, areas):
+        reg_cols = [r.shape[1] for r in regions]
+        sort_indices = np.argsort(reg_cols)
+
+        reg_sorted = [regions[k] for k in sort_indices]
+        areas_sorted = [areas[k] for k in sort_indices]
+        return reg_sorted, areas_sorted
+
+    regions, areas = sort_regions(regions, areas)
+
+    return regions, areas
     
+
+def build_stat_string(**kwargs):
+    pattern_dict = {0: 'G3', 1: 'G4+G5'}
+
+    # Constant header
+    header = [
+        'Slide\nName', 
+        'Processing\nTime (s)', 
+        'Date', 
+        'Tumor %', 
+        'Major\nPatterns'
+    ]
+
+    # Lucky that data is just one row
+    slide_name = os.path.basename(kwargs['filename'])
+
+    # Processing time 
+    time_min = np.floor(kwargs['time_elapsed'] / 60)
+    time_sec = kwargs['time_elapsed'] % 60
+
+    # Tumor Area
+    stats = kwargs['stats']
+    cancer_area = stats['Cancer_area']
+    Tumor_pct = cancer_area / float(stats['Tissue_area'])
+
+    # Major patterns: 
+    pattern_threshold = cancer_area * 0.1  # 10% cancer area
+    grade_areas = [stats['Low_grade_area'], stats['High_grade_area']]
+
+    pattern_str = r''
+    for k, ga in enumerate(grade_areas):
+        if ga > pattern_threshold:
+            pattern_str = r'{} {} $({:3.2f})$\%'.format(
+                pattern_str,
+                pattern_dict[k],
+                ga / float(cancer_area) * 100)
+
+    wsi = OpenSlide(kwargs['filename'])
+    process_map = kwargs['process_map']
+
+    data = [
+        slide_name,
+        '${}min$ ${:3.1f}s$'.format(int(time_min), time_sec),
+        r'{}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        r'${:3.2f}$\%'.format(Tumor_pct * 100),
+        pattern_str
+    ]
+
+
+    return header, data
+
+
 
 def create_report(**kwargs):
     draw_class_images(kwargs['classimg'], kwargs['exp_home'])
     reportfile = os.path.join(kwargs['exp_home'], 'report.pdf')
     colors = kwargs['colors']
 
-    regions = imgs_to_plot(kwargs['process_map'], kwargs['colorized'])
-
-
-    # Options for the drawn figure
+    regions, areas = imgs_to_plot(kwargs['colorized'])
     nreg = len(regions)
-    # ax = plt.figure(dpi=300)
-    fig, ax = plt.subplots(nreg, 1, figsize=(5, 13))
-    # fig.
-    # plt.tick_params(axis='both', which='both', bottom='off', top='off',
-    #             labelbottom='off', right='off', left='off', labelleft='off')
-    # fig, ax = plt.subplots(nreg+1, 1)
-    # fig.set_dpi(450)
 
-    if nreg == 1:
-        active_ax = ax
-        active_ax.imshow(regions[0])
-        active_ax.tick_params(axis='both', which='both', bottom='off', top='off',
-                labelbottom='off', right='off', left='off', labelleft='off')
-    else: 
-        for k, reg in enumerate(regions):
-            active_ax = ax[k]
-            active_ax.imshow(reg)
-            active_ax.tick_params(axis='both', which='both', bottom='off', top='off',
-                    labelbottom='off', right='off', left='off', labelleft='off')
-            # active_ax.imshow(reg)
+    with PdfPages(reportfile) as pdf:
+        if nreg == 1:
+            ax=plt.figure()
+            plt.imshow(regions[0])
+            # ax.set_xlabel([])
+            # ax.set_ylabel([])
+            plt.title('Region 1, Area = {}'.format(areas[0]))
+            pdf.savefig(dpi=300)
+            plt.close()
+        else:
+            for k, (reg, area) in enumerate(zip(regions, areas)):
+                ax=plt.figure()
+                plt.imshow(reg)
+                # ax.set_xlabel([])
+                # ax.set_ylabel([])
+                plt.title('Region {}, Area = {}'.format(k, area))
+                pdf.savefig(dpi=300)
+                plt.close()
 
+        plt.rc('text', usetex=True)
+        fig, ax = plt.subplots(1,1)
+        # ax.set_xtick([])
+        # ax.set_ytick([])
+        bbox_colors = [0.1, 0.1, 0.2, 0.8]
+        tb = Table(ax, bbox=bbox_colors)
+        # tb = Table(ax)
+        tb.add_cell(1, 1, 0.1, 0.25, text='BG', loc='center', facecolor=colors[0,:]/255.0)
+        tb.add_cell(2, 1, 0.1, 0.25, text='Low Grade',loc='center', facecolor=colors[1,:]/255.0)
+        tb.add_cell(3, 1, 0.1, 0.25, text='High Grade',loc='center', facecolor=colors[2,:]/255.0)
+        tb.add_cell(4, 1, 0.1, 0.25, text='BN',loc='center', facecolor=colors[3,:]/255.0)
+        tb.add_cell(5, 1, 0.1, 0.25, text='ST',loc='center', facecolor=colors[4,:]/255.0)
+     
+        ax.add_table(tb)
 
-    header, data = build_stat_string(
-        filename=kwargs['filename'],
-        time_elapsed=kwargs['time_elapsed'],
-        stats=kwargs['stats'],
-        process_map=kwargs['process_map']
-    )
+        header, data = build_stat_string(
+            filename=kwargs['filename'],
+            time_elapsed=kwargs['time_elapsed'],
+            stats=kwargs['stats'],
+            process_map=kwargs['process_map']
+        )
 
-    tab = plt.table(cellText=data, colLabels=header, loc='top', cellLoc='center',
-                    bbox=[00, -0.38, 1, 0.18])
+        bbox_info = [0.5, 0.1, 0.4, 0.8]
+        tb = Table(ax, bbox=bbox_info)
+        nrow = float(len(data))
+        for k, (h, d) in enumerate(zip(header, data)):
+            tb.add_cell(k, -1, 0.1, 1/nrow, text=h)
+            tb.add_cell(k, 1, 0.3, 1/nrow, text=d)
 
-    # header = ['G3', 'G4', 'BN', 'ST', 'G5']
-    tb = Table(active_ax, bbox=[0, -0.17, 1, 0.04])
-    tb.add_cell(1, 1, 1/5.0, 1/5.0, facecolor=colors[0,:]/255.0)
-    tb.add_cell(1, 2, 1/5.0, 1/5.0, facecolor=colors[1,:]/255.0)
-    tb.add_cell(1, 3, 1/5.0, 1/5.0, facecolor=colors[2,:]/255.0)
-    tb.add_cell(1, 4, 1/5.0, 1/5.0, facecolor=colors[3,:]/255.0)
-    tb.add_cell(1, 5, 1/5.0, 1/5.0, facecolor=colors[4,:]/255.0)
-    # tb.add_cell(1, 6, 1/6.0, 1/6.0, facecolor=colors[5,:]/255.0)
+        # tab = ax.table(cellText=data, rowLabels=header, cellLoc='center',
+        #     bbox=bbox_info)
+        # tab = ax.table(cellText=data, rowLabels=header, loc='center', cellLoc='center')
 
-    tb.add_cell(-1, 1, 1/5.0, 1/5.0, text='BG', loc='center', edgecolor='none', facecolor='none')
-    tb.add_cell(-1, 2, 1/5.0, 1/5.0, text='Low Grade', loc='center', edgecolor='none', facecolor='none')
-    tb.add_cell(-1, 3, 1/5.0, 1/5.0, text='High Grade', loc='center', edgecolor='none', facecolor='none')
-    tb.add_cell(-1, 4, 1/5.0, 1/5.0, text='BN', loc='center', edgecolor='none', facecolor='none')
-    tb.add_cell(-1, 5, 1/5.0, 1/5.0, text='ST', loc='center', edgecolor='none', facecolor='none')
-    # tb.add_cell(-1, 6, 1/6.0, 1/6.0, text='G5', loc='center', edgecolor='none', facecolor='none')
-
-    active_ax.add_table(tb)
-    # plt.tick_params(axis='both', which='both', bottom='off', top='off',
-    #                 labelbottom='off', right='off', left='off', labelleft='off')
-    # plt.imshow(kwargs['colorized'])
-    plt.savefig(reportfile, bbox_inches='tight')
-    plt.close()
+        ax.add_table(tb)
+        pdf.savefig()
+        plt.close()
 
 
 def main(**kwargs):
@@ -620,6 +677,10 @@ def main(**kwargs):
         colors=colormap
     )
 
+    ## Some stdout feedback
+    print '\nFinished processing {}'.format(kwargs['filename'])
+    print 'Time elapsed: {:0.2f}s'.format(time_total_elapsed)
+
 
 if __name__ == '__main__':
     # Take in or set args
@@ -639,7 +700,7 @@ if __name__ == '__main__':
     
     filename = sys.argv[1]
     #filename = '/Users/nathaning/_projects/histo-seg/pca/dev/1305497.svs'
-    # filename = '/home/nathan/data/pca_wsi/1305400.svs'
+    # filename = '/home/nathan/data/pca_wsi/NEPC12E-HE.svs'
     main(filename=filename,
          scales=scales,
          scale_weights=scale_weights,
