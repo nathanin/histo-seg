@@ -8,7 +8,7 @@ The core functions are two-fold:
 * Image processing & machine vision functions based on state of the art Convolutional Neural Network architectures. 
 
 
-Segmentation and semantic labelling uses the [SegNet](http://mi.eng.cam.ac.uk/projects/segnet/) architecture [github](https://github.com/alexgkendall/caffe-segnet).
+Segmentation and semantic labelling uses the [SegNet](http://mi.eng.cam.ac.uk/projects/segnet/) architecture ([github](https://github.com/alexgkendall/caffe-segnet)).
 Other methods such as tile-level classification, Fully Connected Networks, and Fully Connected Conditional Random Fields may be substituted for quick comparison.
 
 
