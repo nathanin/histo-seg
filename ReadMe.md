@@ -12,7 +12,7 @@ Segmentation and semantic labelling uses the [SegNet](http://mi.eng.cam.ac.uk/pr
 Other methods such as tile-level classification, Fully Connected Networks, and Fully Connected Conditional Random Fields may be substituted for quick comparison.
 
 
-### Examples use cases 
+### Examples / Use cases 
 * Use-case 1: prostate cancer growth patterns, from manual annotation
 
 * Use-case 2: clear cell renal cancer microenviornment, from automatic Immunohistochemistry annotation
