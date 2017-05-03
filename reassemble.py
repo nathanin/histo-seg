@@ -308,7 +308,7 @@ def class_probs2labels(classimg, background=None, mode='argmax'):
         if background.shape[:2] != labelmask.shape[:2]:
             x, y = labelmask.shape[:2]
             background.dtype = np.uint8
-            background = cv2.resize(background, shape=(y, x),
+            background = cv2.resize(background, dsize=(y, x),
                 interpolation=cv2.INTER_NEAREST)
             background.dtype = np.bool
 
@@ -320,7 +320,6 @@ def class_probs2labels(classimg, background=None, mode='argmax'):
 
 def get_decision(classimg, svs, svs_level, colors, settings):
     # The main thing this function does now is to load the rgb
-    # Load up RGB image
     rgb = svs.read_region(
         (0, 0), level=svs_level, size=svs.level_dimensions[svs_level])
     rgb = np.array(rgb)
@@ -328,12 +327,7 @@ def get_decision(classimg, svs, svs_level, colors, settings):
     #rgb = np.array(rgb)[:, :, :3]
     rgb = rgb[:, :, (2, 1, 0)]  # ???
 
-    #TODO (nathan) only if the size is larger than some constant
-    # -- Also have to change it somewhere else, idk where
-    rgb = cv2.resize(rgb, dsize=(0,0), fx=0.5, fy=0.5)
-
     background = get_background(settings, rgb)
-
     labelmask = class_probs2labels(classimg, background=background, mode='argmax')
     # labelmask = np.argmax(classimg, axis=2) + 1
     # labelmask[background] = 0
@@ -342,11 +336,6 @@ def get_decision(classimg, svs, svs_level, colors, settings):
     # TODO (nathan) fix magic numbers !!!
     labelmask[labelmask == 5] = 2
 
-    # Convert lable matrix to solid RGB colors
-    #labelmask = impose_colors(labelmask, colors)
-
-    # Check assertion that the images be the same shape.
-    # at most, off by 1 px rounding error:
     if rgb.shape != classimg.shape:
         tt = classimg.shape[:2]  # Why is it flipped
         rgb = cv2.resize(rgb, dsize=(tt[1], tt[0]))
