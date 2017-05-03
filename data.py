@@ -563,11 +563,13 @@ def get_all_regions(m, threshold=80):
     regions = []
     ll, contours = label_regions(m)
 
+    cntout = []
     for idx, ct in enumerate(contours):
         if (ll == idx + 1).sum() >= threshold:
             regions.append(cv2.boundingRect(ct))
+            cntout.append(ct)
 
-    return regions
+    return regions, cntout
 
 
 def empty_block(place_size):
@@ -768,7 +770,7 @@ def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff,
     [N, M] = m.shape  # Forego printing
 
     # Pull out disconnected regions that pass a size cutoff:
-    regions = get_all_regions(m, threshold=area_cutoff)
+    regions, _ = get_all_regions(m, threshold=area_cutoff)
 
     overlay_dir = ''
     if overlay:
