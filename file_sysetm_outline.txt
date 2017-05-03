@@ -1,0 +1,20 @@
+histo-seg
+    <tissue>
+        <project / training_dataset>
+            tiles_<scale1>
+            tiles_<scale2>
+            ...
+            prob_0_<scale1>
+            prob_0_<scale2>
+            ...
+            prob_n_<scale1>
+            prob_n_<scale2>
+            ...
+            tilemap_<scale1>.npy
+            tilemap_<scale2>.npy
+            ...
+            color.jpg
+            raw.png
+            outline.jpg
+            report.txt
+            report.pdf
