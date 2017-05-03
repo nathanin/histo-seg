@@ -14,11 +14,15 @@ nathan.ing@cshs.org
 
 '''
 
-import data
-import glob
-import os
+#import data
+from openslide import OpenSlide
 import cv2
+import colorNormalization as cnorm
 import numpy as np
+
+import glob
+import shutil
+import os
 import sys
 
 # /home/nathan/histo-seg/code/data_pipeline.py
@@ -87,8 +91,118 @@ def impose_overlay(listfile, dst):
         cv2.imwrite(os.path.join(dst, writename), img)
 
 
+def data_rotate(t, iters, ext='jpg', mode='3ch', writesize=256):
+    center = (writesize / 2 - 1, writesize / 2 - 1)
+    rotation_matrix = cv2.getRotationMatrix2D(
+        center=center, angle=90, scale=1.0)
+
+    img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
+    for name in img_list:
+        if mode == '3ch':
+            img = cv2.imread(name)
+        elif mode == '1ch':
+            #img = cv2.imread(name, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+            img = cv2.imread(name)
+            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
+
+        for k in range(iters):
+            name = name.replace('.' + ext, 'r.' + ext)
+            #print name
+            img = rotate(img, rotation_matrix)
+            cv2.imwrite(filename=name, img=img)
+
+    print '\tDone rotating images in {}'.format(t)
+
+
+
+def data_coloration(t, mode, ext):
+    '''
+    LOL
+    '''
+    # TODO replace with random  numbers generated from uniform distrib.
+    l_mean_range = (144.048, 130.22, 135.5, 140.0)
+    l_std_range = (40.23, 35.00, 35.00, 37.5)
+
+    img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
+    for idx, name in enumerate(img_list):
+        if idx % 500 == 0:
+            print '\tcolorizing {} of {}'.format(idx, len(img_list))
+            for LMN, LSTD in zip(l_mean_range, l_std_range):
+                name_out = name.replace('.' + ext, 'c.' + ext)
+                if mode == 'feat':
+                    img = cv2.imread(name)
+                    img = coloration(img, LMN, LSTD)
+                    cv2.imwrite(filename=name_out, img=img)
+                elif mode == 'anno':
+                    img = cv2.imread(name)
+                    cv2.imwrite(filename=name_out, img=img)
+
+    print '\tDone color augmenting images in {}'.format(t)
+
+
+
+def delete_list(imglist):
+    print 'Removing {} files'.format(len(imglist))
+    for img in imglist:
+        os.remove(img)
+
+def multiply_data(src, anno, scales = [512], multiplicity = [9]):
+    '''
+    Define a set of transformations, to be applied sequentially, to images.
+    For each image, track it's annotation image and copy the relevant transformations.
+
+    This should work for any sort fo experiment where
+    - annotation images are contained in one dir
+    - similary named source images are contained in their own dir
+    - we want them to be multiplied
+
+    '''
+
+    print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(
+        src, anno)
+    choice = input('I have made copies. (1/no) ')
+
+    if choice == 1:
+        print 'Continuing'
+    else:
+        print 'non-1 response. exiting TODO: Make this nicer'
+        return 0
+
+    if len(scales) != len(multiplicity):
+        print 'Warning: scales and multiplicity must match lengths'
+        return 0
+
+    srclist = sorted(glob.glob(os.path.join(src, '*.jpg')))
+    annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
+
+    # Multi-scale
+    for scale, numbersub in zip(scales, multiplicity):
+        print 'Extracting {} subregions of size {}'.format(numbersub, scale)
+        coords = sub_img(
+            srclist, ext='jpg', mode='3ch', edge=scale, n=numbersub)
+        print 'Repeating for png'
+        _ = sub_img(
+            annolist,
+            ext='png',
+            mode='1ch',
+            edge=scale,
+            coords=coords,
+            n=numbersub)
+
+
+    # Now it's OK to remove the originals
+    delete_list(srclist)
+    delete_list(annolist)
+
+    data_coloration(src, 'feat', 'jpg')
+    data_coloration(anno, 'anno', 'png')
+
+    data_rotate(src, 3, ext='jpg', mode='3ch')
+    data_rotate(anno, 3, ext='png', mode='1ch')
+
+
 def make_segmentation_training(src, anno, root, scales, multiplicity):
-    data.multiply_data(src, anno, scales, multiplicity)
+    multiply_data(src, anno, scales, multiplicity)
     return makelist(src, anno, root)
 
 

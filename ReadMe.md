@@ -1,11 +1,11 @@
 ## Histo-Seg
 You have found my work-in-progress tool for digital histopathology segmentation & semantic labelling.
 
-The core functions are two-fold:
+The core functions are:
 
 * Through the [openslide](http://openslide.org) library, provide headache-free processing to reassembly of Gigapixel sized images.
 
-* Image processing & machine vision functions based on state of the art Convolutional Neural Network architectures. 
+* To explore image processing & machine vision functions based on state of the art machine learning methods. 
 
 
 Segmentation and semantic labelling uses the [SegNet](http://mi.eng.cam.ac.uk/projects/segnet/) architecture [github](https://github.com/alexgkendall/caffe-segnet).
@@ -21,7 +21,7 @@ Other methods such as tile-level classification, Fully Connected Networks, and F
 
 
 ### Preparing data
-Training data follows the "data - label" pair model. Each "data" image should be accompanied by a similarly sized "label" image indicating ground truth examples for the classification. The annotations often indicate discrete classes canonically defined by pathologist consensus.
+Training data follows the "data - label" pair model. Each "data" image should be accompanied by a similarly sized "label" image indicating ground truth examples for the classification. The annotations often indicate discrete biological structures or motifs canonically defined by pathologist consensus.
 
 In histopathology, training data must be curated with the domain knowledge of a trained pathologist. Annotation scarcity is a well documented shortcoming in the field (citations), and represents a significant bottleneck in training data-driven models. Therefore, it's common to use data augmentation pre-processing steps which effectively multiply the area used for training. Some data augmentation implemented here includes:
 * Random sub-sampling at variable scales
