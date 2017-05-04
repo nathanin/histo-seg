@@ -21,10 +21,10 @@ histoseg=/home/nathan/histo-seg/code
 # ls $svsdir/*.svs | parallel -j 2 $histoseg/reassemble.py \
 #     $project
 
-for svs in $(ls $svsdir/*.svs); do
-    echo $svs
-    $histoseg/reassemble.py $svs
-done
+#for svs in $(ls $svsdir/*.svs); do
+#    echo $svs
+#    $histoseg/reassemble.py $svs
+#done
 
 #echo "Transferring results to Dropbox"
 #python ./transfer_results.py
