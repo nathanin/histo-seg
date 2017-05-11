@@ -40,9 +40,6 @@ def PrintFrame():
     return '{} in {} @ {}'.format(thisfile, thisfun, thisline)
 
 
-'''
-```````````````` DEBUGGING FUNCTOIN ``````````````````
-'''
 
 ##################################################################
 ##################################################################
@@ -91,9 +88,12 @@ def coloration(img, l_mean, l_std):
 
 
 def data_coloration(t, mode, ext):
+    # TODO (nathan) make this whole thing not stupid 
     # TODO replace with random  numbers generated from uniform distrib.
-    l_mean_range = (144.048, 130.22, 135.5, 140.0)
-    l_std_range = (40.23, 35.00, 35.00, 37.5)
+    l_mean_range = (150.3, 144.05, 140.5, 135.2, 130.22)
+    l_std_range = (40.23, 35.00, 35.00, 37.5, 40.23)
+    # l_mean_range = (144.048, 130.22, 135.5, 140.0)
+    # l_std_range = (40.23, 35.00, 35.00, 37.5)
 
     img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
     for idx, name in enumerate(img_list):
@@ -275,7 +275,7 @@ def find_bcg(wsi):
 ##################################################################
 ##################################################################
 ###
-###       ~~~~~~ Inference from SVS file ~~~~~~~~~
+###       ~~~~~~~~~ Inference from SVS file ~~~~~~~~~
 ###
 ##################################################################
 ##################################################################
@@ -475,6 +475,7 @@ def create_dirs_inference(filename, writeto, sub_dirs, remove=False):
     return exp_home, created_dirs, use_existing
 
 
+
 # New: adding overlap option
 def make_inference(filename,
                    writeto,
@@ -540,6 +541,7 @@ def make_inference(filename,
     return exp_home, created_dirs, reportfile
 
 
+
 def label_regions(m):
     h, w = m.shape
     bw = m > 0
@@ -553,6 +555,7 @@ def label_regions(m):
             ll, [ct], 0, idx + 1, thickness=-1)  # thickness -1 means to fill
 
     return ll, contours
+
 
 
 def get_all_regions(m, threshold=80):
@@ -570,6 +573,7 @@ def get_all_regions(m, threshold=80):
             cntout.append(ct)
 
     return regions, cntout
+
 
 
 def empty_block(place_size):

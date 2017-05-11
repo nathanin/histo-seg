@@ -494,10 +494,10 @@ def build_stat_string(**kwargs):
 
     # Constant header
     header = [
-        'Slide\nName', 
+        'Slide Name', 
         'Processing\nTime (s)', 
         'Date', 
-        'Tumor %', 
+        'Tumor percentage\nof tissue', 
         'Major\nPatterns'
     ]
 
@@ -520,7 +520,7 @@ def build_stat_string(**kwargs):
     pattern_str = r''
     for k, ga in enumerate(grade_areas):
         if ga > pattern_threshold:
-            pattern_str = r'{} {} $({:3.2f})$\%'.format(
+            pattern_str = r'{} {} (${:3.2f}$\%)'.format(
                 pattern_str,
                 pattern_dict[k],
                 ga / float(cancer_area) * 100)
@@ -530,12 +530,11 @@ def build_stat_string(**kwargs):
 
     data = [
         slide_name,
-        '${}min$ ${:3.1f}s$'.format(int(time_min), time_sec),
+        '${}$min ${:3.1f}$s'.format(int(time_min), time_sec),
         r'{}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
         r'${:3.2f}$\%'.format(Tumor_pct * 100),
         pattern_str
     ]
-
 
     return header, data
 
@@ -612,15 +611,15 @@ def main(**kwargs):
 
     time_all_start = time.time()
 
-    exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
-    reportfile = get_reportfile(exp_home)
+    # exp_home = get_exp_home(kwargs['writeto'], kwargs['filename'])
+    # reportfile = get_reportfile(exp_home)
 
-    # exp_home, reportfile = init_file_system(
-    #     filename=kwargs['filename'],
-    #     writeto=kwargs['writeto'],
-    #     outputs=kwargs['outputs'],
-    #     scales=kwargs['scales']
-    # )
+    exp_home, reportfile = init_file_system(
+        filename=kwargs['filename'],
+        writeto=kwargs['writeto'],
+        outputs=kwargs['outputs'],
+        scales=kwargs['scales']
+    )
 
     print 'Recording run info to {}'.format(reportfile)
     repstr = 'Working on slide {}\n'.format(kwargs['filename'])
@@ -631,18 +630,18 @@ def main(**kwargs):
         reportfile=reportfile
     )
 
-    # process_multiscale(
-    #     filename=kwargs['filename'],
-    #     scales=kwargs['scales'],
-    #     weights=kwargs['weights'],
-    #     outputs=kwargs['outputs'],
-    #     model_template=kwargs['model_template'],
-    #     reportfile=reportfile,
-    #     process_map=process_map,
-    #     exp_home=exp_home
-    # )
+    process_multiscale(
+        filename=kwargs['filename'],
+        scales=kwargs['scales'],
+        weights=kwargs['weights'],
+        outputs=kwargs['outputs'],
+        model_template=kwargs['model_template'],
+        reportfile=reportfile,
+        process_map=process_map,
+        exp_home=exp_home
+    )
 
-    # # # In dev mode it's ok to just do this; it's pretty quick
+    # # # In dev mode it's ok to still do this; it's pretty quick
     labels, colorized, classimg, colormap = aggregate_scales(
         project=kwargs['writeto'],
         filename=kwargs['filename'],
@@ -656,7 +655,6 @@ def main(**kwargs):
     s = 'TIME total elapsed = {}\n'.format(time_total_elapsed)
     record_processing(reportfile, s)
 
-    # TODO (nathan) create some slide-level output
 
     stats = generate_stats(
         filename=kwargs['filename'],
@@ -685,16 +683,14 @@ def main(**kwargs):
 if __name__ == '__main__':
     # Take in or set args
     # These stay the same
-    scales = [384, 512, 896]
-    scale_weights = [3, 0.5, 0.25]
-    # scales = [384, 896]
-    # scale_weights = [3, 0.25]
+    scales = [384, 598, 896]
+    scale_weights = [3, 1, 0.5]
     weights = ['/home/nathan/semantic-pca/weights/seg_0.8.1/norm_resumed_iter_32933.caffemodel',
-               '/home/nathan/semantic-pca/weights/seg_0.5/norm_iter_125000.caffemodel',
+               '/home/nathan/semantic-pca/weights/seg_0.8.726/norm_iter_15000.caffemodel',
                '/home/nathan/semantic-pca/weights/seg_0.8.1024/norm_iter_125000.caffemodel']
     model_template = '/home/nathan/histo-seg/code/segnet_basic_inference.prototxt'
     #writeto = '/Users/nathaning/_projects/histo-seg/pca/dev'
-    writeto = '/home/nathan/histo-seg/pca/dev'
+    writeto = '/home/nathan/histo-seg/pca/triplet'
     outputs = [0,1,2,3,4]
 
     

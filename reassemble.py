@@ -317,6 +317,26 @@ def class_probs2labels(classimg, background=None, mode='argmax'):
     return labelmask
 
 
+def floodfill_classes(labelmask):
+    # Flood fill the majority grade per gland area out to the stroma
+    # Count on stroma class to be well segmented and robust
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def get_decision(classimg, svs, svs_level, colors, settings):
     # The main thing this function does now is to load the rgb

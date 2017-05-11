@@ -33,7 +33,7 @@ def PrintFrame():
     return '{} in {} (@ line {})'.format(thisfile, thisfun, thisline)
 
 
-def init_net(model, weights, mode, GPU_ID):
+def init_net(model, weights, mode=0, GPU_ID=0):
     if mode == 0:
         caffe.set_mode_gpu()
         caffe.set_device(GPU_ID)
@@ -107,7 +107,7 @@ def impose_colors(label, colors):
     return rgb
 
 
-def get_output(d, pred, out, colors):
+def get_output(d, pred, out, colors, **kwargs):
     # TODO Add support for BATCHSIZE > 1
     # UPGRADE all options except "prob" are outdated 
 
@@ -118,7 +118,8 @@ def get_output(d, pred, out, colors):
     elif "prob" in d:
         # MAGIC:
         # "prob_X"
-        layer = int(d[5])  # This will work as long as"
+        layer = kwargs['layer']
+        # layer = int(d[5])  # This will work as long as"
         # 1. "prob" is in front &&
         # 2. there are only single digit number of classes.
         # TODO replace with regex
@@ -126,7 +127,7 @@ def get_output(d, pred, out, colors):
             x = out[layer, :, :] * 255
         except:
             # There is no corresponding output layer
-            # TODO how to use warning()
+            # TODO how to use warning() # Apr. 25, 2017
             x = np.zeros(shape=(256,256), dtype=np.float64) + 0.5
 
     elif d == "label":
@@ -170,10 +171,10 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportf
         write_name_base = os.path.basename(img).replace(
             '.jpg', '.png')  # Fix magic file types
         # be smarter
-        for d in expdirs[1:]:
+        for layer, d in enumerate(expdirs[1:]):
             write_name = os.path.join(d, write_name_base)
             _, d = os.path.split(d)
-            x = get_output(d, pred, out, colors)
+            x = get_output(d, pred, out, colors, layer=layer)
             cv2.imwrite(filename=write_name, img=x)
 
     end_time = time.time()

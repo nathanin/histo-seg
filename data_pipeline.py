@@ -7,10 +7,9 @@ annotations in PNG and labels in JPG images, located in respective folders
 
 Several data augmentation strategies are applied.
 
-The working functions are in the file `data.py`
+The working functions are supplied as part of `data.py`
 
 ing.nathany@gmail.com
-nathan.ing@cshs.org
 
 '''
 
@@ -20,10 +19,6 @@ import os
 import cv2
 import numpy as np
 import sys
-
-# /home/nathan/histo-seg/code/data_pipeline.py
-# def make_classification_training(src):
-#	 data.multiply_one_folder(src);
 
 
 def remove_masktxt(path):
@@ -92,9 +87,15 @@ def make_segmentation_training(src, anno, root, scales, multiplicity):
     return makelist(src, anno, root)
 
 
+
+'''
+
+For use with a script that calls data_pipeline.py /path/to/new_dataset
+
+'''
 if __name__ == "__main__":
-    scales = [1024]
-    multiplicity = [35]
+    scales = [726]
+    multiplicity = [24]
     dataset_root = sys.argv[1]
     #dataset_root = '/home/nathan/semantic-pca/data/seg_0.9'
 
