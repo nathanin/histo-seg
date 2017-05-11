@@ -1,8 +1,18 @@
-# /home/nathan/_misc_python/colorNormalization.py
-# /Users/nathaning/local_projects/semantic-pca/code/colorNormalization.py
+'''
+Color transfer of a reference LAB vector mean & standard deviation. 
+
+E. Reinhard "Color transfer between images" <em>IEEE Comput. Graph. Appl.</em> vol. 21 no. 5 pp. 34-41 Sep./Oct. 2001.
+
+image 
+    3-channel RGB space image
+target
+    3x2 numpy ndarray float64
+verbose
+    boolean choice to print feedback to stdout
+'''
+
 
 from scipy import misc
-# from skimage import color
 import skimage as ski
 import numpy as np
 import cv2
