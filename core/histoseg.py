@@ -4,6 +4,7 @@ aka inference.py
 Run an FCN or SegNet with trained and normalized weights.
 
 '''
+
 import os
 import sys
 import glob
@@ -18,8 +19,9 @@ try:
     import caffe
 except:
     print "HISTOSEG import error: caffe"
-    
+
 import time
+
 # Define inspection code that spits out the line it's called from (as str)
 
 
@@ -103,13 +105,13 @@ def impose_colors(label, colors):
         b[bin_l] = colors[l, 2]
 
     #TODO here fix so it just uses one cat to join r, g, and b
-    rgb = np.dstack((b,g,r))
+    rgb = np.dstack((b, g, r))
     return rgb
 
 
 def get_output(d, pred, out, colors, **kwargs):
     # TODO Add support for BATCHSIZE > 1
-    # UPGRADE all options except "prob" are outdated 
+    # UPGRADE all options except "prob" are outdated
 
     if "result" in d:
         labels = np.argmax(out, axis=0)
@@ -128,7 +130,7 @@ def get_output(d, pred, out, colors, **kwargs):
         except:
             # There is no corresponding output layer
             # TODO how to use warning() # Apr. 25, 2017
-            x = np.zeros(shape=(256,256), dtype=np.float64) + 0.5
+            x = np.zeros(shape=(256, 256), dtype=np.float64) + 0.5
 
     elif d == "label":
         ## Same as probability; might have to add an argument
@@ -141,7 +143,13 @@ def get_output(d, pred, out, colors, **kwargs):
     return x
 
 
-def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportfile='./log.txt'):
+def process(exphome,
+            expdirs,
+            model_template,
+            weights,
+            mode=1,
+            GPU_ID=0,
+            reportfile='./log.txt'):
     # Force dest to be a list
     start_time = time.time()
     if isinstance(expdirs[1:], basestring):
@@ -160,8 +168,8 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportf
     for i, img in enumerate(imgs):
         if i % 100 == 0:
             print '\tHistoseg processing img {} / {}'.format(i, len(imgs))
-            repf.write('\tHistoseg processing img {} / {}\n'.format(i,
-                                                                    len(imgs)))
+            repf.write(
+                '\tHistoseg processing img {} / {}\n'.format(i, len(imgs)))
 
         _ = net.forward()
         pred = net.blobs['prob'].data
@@ -188,5 +196,3 @@ def process(exphome, expdirs, model_template, weights, mode=1, GPU_ID=0, reportf
     # Clean pycaffe from the GPU
     # https://github.com/BVLC/caffe/issues/1702
     del net
-
-
