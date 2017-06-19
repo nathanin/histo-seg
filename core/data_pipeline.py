@@ -1,4 +1,3 @@
-#!/usr/bin/python
 '''
 This script is for creating datasets from labelled image-annotation pairs
 
@@ -9,12 +8,24 @@ Several data augmentation strategies are applied.
 
 The working functions are in the file `data.py`
 
+See ReadMe.md for a minimal use case
+
+----------------------------------------------------
+Arguments:
+Position args: [1] scale - integer - square length
+               [2] multiplicity - integer - # of sub-samples
+               [3] dataset name - string
+
+----------------------------------------------------
+Usage:
+$ python ~/histo-seg/core/data_pipeline.py dataset_01
+
+
 ing.nathany@gmail.com
 nathan.ing@cshs.org
 
 '''
 
-#import data
 from openslide import OpenSlide
 import cv2
 import colorNormalization as cnorm
@@ -207,9 +218,11 @@ def make_segmentation_training(src, anno, root, scales, multiplicity):
 
 
 if __name__ == "__main__":
-    scales = [1024]
-    multiplicity = [35]
-    dataset_root = sys.argv[1]
+    # scales = [1024]
+    # multiplicity = [35]
+    scales = sys.argv[1]
+    multiplicity = sys.argv[2]
+    dataset_root = sys.argv[3]
     #dataset_root = '/home/nathan/semantic-pca/data/seg_0.9'
 
     root = os.path.join(dataset_root, 'train')

@@ -9,7 +9,7 @@ The core functions are:
 
 
 Segmentation and semantic labelling uses the [SegNet](http://mi.eng.cam.ac.uk/projects/segnet/) architecture ([github](https://github.com/alexgkendall/caffe-segnet)).
-Other methods such as tile-level classification, Fully Connected Networks, and Fully Connected Conditional Random Fields may be substituted for quick comparison.
+Other methods that take in images and produce label matrices can be quickly substituted for comparitive analyses.
 
 
 ### Examples / Use cases 
@@ -37,9 +37,16 @@ Processing happens in 3 phases:
 * High-resolution discretized processing
 * Process results agglomeration and report generation
 
-These phases are implemented as individual packages, together composing the "core" module. Since each phase depends only on the previous phase being completed, they are executable in isolation for fast idea prototyping. For example, I have 10 slides to process. Phase 1 performs the basic tissue-finding and tiling well. There is no longer much need to performe phase 1 if I want to try options in phases 2 and 3. 
+These phases are implemented as individual packages, together composing the "core" module. Since each phase depends only on the previous phase being completed, they are executable in isolation for fast idea prototyping. For example, I have 10 slides to process. Phase 1 performs the basic tissue-finding and tiling well. There is no longer much need to repeat phase 1 if I want to try options in phases 2 and 3, so we recycle the output of phase 3. This approach comes at the cost of disk space and I/O time. A fast SSD or an emulated RAM drive are two options for allevaiting this overhead. 
 
 It was a side goal to allow execution on a massively parallel enviornment like an HPC cluster for discrete phases. Then to pull the results into a central system for further processing, analysis, and long term storage. This goal has yet to be realized. 
 
+
+### Autoencoding
+TODO
+
+
+### Affiliations
+This package was developed with support from the BioImageInformatics Lab at Cedars Sinai Medical Center, Los Angeles, CA.
 
 Questions & comments to ing[dot]nathany[at]gmail[dot]com

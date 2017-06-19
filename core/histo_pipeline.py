@@ -399,10 +399,6 @@ def generate_stats(**kwargs):
     return stats
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> ab6e45ab070547773acd7114d8e59c6747c0d364
 def draw_class_images(classimg, exp_home):
     ax = plt.figure(figsize=(5, 9))
     c_dict = {0: 'G3', 1: 'G4', 2: 'BN', 3: 'ST', 4: 'G5'}
