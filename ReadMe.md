@@ -1,50 +1,70 @@
 ## Histo-Seg
-You have found my work-in-progress tool for digital histopathology segmentation & semantic labelling.
-
 The core functions are:
 
-* Through the [openslide](http://openslide.org) library, provide headache-free processing to reassembly of Gigapixel sized images.
+* Provide headache free processing to reassembly of Gigapixel sized images through the [openslide](http://openslide.org) library and Convolutional Neural Networks.
 
-* To explore image processing & machine vision functions based on state of the art machine learning methods. 
+* A framework to explore state of the art machine learning methods in application to digital pathology image analysis.
+
+See our publication [HERE].
+
+Segmentation and semantic labelling using the [SegNet](http://mi.eng.cam.ac.uk/projects/segnet/) architecture ([github](https://github.com/alexgkendall/caffe-segnet)). An interesting post-processing layer implementing Conditional Random Fields ([CRFasRNN](https://github.com/torrvision/crfasrnn)) is optional. Note that these two architectures use layers unavailable in `caffe-master`. A merger of the two custom branches can be found ([here](https://github.com/nathanin/caffe-segnet-crf)).
+
+Other methods (e.g. FCN) that take in images and produce label matrices can be quickly substituted as an alternative.
 
 
-Segmentation and semantic labelling uses the [SegNet](http://mi.eng.cam.ac.uk/projects/segnet/) architecture ([github](https://github.com/alexgkendall/caffe-segnet)).
-Other methods that take in images and produce label matrices can be quickly substituted for comparitive analyses.
-
-
-### Examples / Use cases 
+### Example Use Cases
 * Use-case 1: prostate cancer growth patterns, from manual annotation
 
-* Use-case 2: clear cell renal cancer microenviornment, from automatic Immunohistochemistry annotation
+* Use-case 2: clear cell renal cancer microenvironment, via automatic transfer of Immunohistochemistry annotation
 
 * Use-case 3: lung adenocarcinoma growth patterns, with converted Full-Connected deconvolution layers; trained on whole tile examples.
 
+## Workflow
+### Installation
+A partial list of package dependecies:
+* openslide-python
+* numpy
+* scipy
+* matplotlib
+* OpenCV 2
 
-### Preparing data
-Training data follows the "data - label" pair model. Each "data" image should be accompanied by a similarly sized "label" image indicating ground truth examples for the classification. The annotations often indicate discrete biological structures or motifs canonically defined by pathologist consensus.
+### Training
+#### Preparing data
+Training data follows the "data - label" pair model. Each "data" image should be accompanied by a similarly sized "label" image indicating ground truth examples for the classification. The annotations often indicate discrete biological structures or motifs canonically defined by pathologist consensus. Each "data - label" pair ought to have the same root file name. E.g.:
 
-In histopathology, training data must be curated with the domain knowledge of a trained pathologist. Annotation scarcity is a well documented shortcoming in the field (citations), and represents a significant bottleneck in training data-driven models. Therefore, it's common to use data augmentation pre-processing steps which effectively multiply the area used for training. Some data augmentation implemented here includes:
-* Random sub-sampling at variable scales
-* Color augmentation in LAB space 
+```
+Training/
+  feature/
+    img001.jpg
+    img002.jpg
+  label/
+    img001.png
+    img002.png
+```
+
+In histopathology, training data must be curated with the domain knowledge of a trained pathologist. Annotation scarcity is well documented in the field (citations), and represents a significant bottleneck in training data-driven models. Therefore, it's common to use data augmentation pre-processing steps which effectively multiply the area used for training. Some data augmentation implemented here includes:
+* Random sub-sampling, including over-sampling
+* Color augmentation in LAB space
 * Image rotation
 
+In the future, instead of saving large datasets of individually preprocessed images, it's likely better to store a single reference dataset and apply runtime augmentation.
 
-### Processing Methodology
-After a segmentation model is trained, the most interesting application setting is to whole mount slides or biopsies. These are the smallest unit of tissue that pathologists evaluate for the presence and severity of diseased cells. A major aim of this package is to emulate a pathologist's evalutation. 
- 
+#### Processing
+After a segmentation model is trained, the most interesting application setting is to whole mount slides or biopsies. These are the smallest unit of tissue that pathologists evaluate for the presence and severity of diseased cells. A major aim of this package is to emulate a pathologist's evaluation.
+
 Processing happens in 3 phases:
 * Data preparation from Whole Slide Images (WSI) and low-level ROI finding
 * High-resolution discretized processing
 * Process results agglomeration and report generation
 
-These phases are implemented as individual packages, together composing the "core" module. Since each phase depends only on the previous phase being completed, they are executable in isolation for fast idea prototyping. For example, I have 10 slides to process. Phase 1 performs the basic tissue-finding and tiling well. There is no longer much need to repeat phase 1 if I want to try options in phases 2 and 3, so we recycle the output of phase 3. This approach comes at the cost of disk space and I/O time. A fast SSD or an emulated RAM drive are two options for allevaiting this overhead. 
+These phases are implemented as individual packages, together composing the "core" module. Since each phase depends only on the previous phase being completed, they are executable in isolation for fast idea prototyping. For example, I have 10 slides to process. Phase 1 performs the basic tissue-finding and tiling well. There is no longer much need to repeat phase 1 if I want to try options in phases 2 and 3, so we recycle the output of phase 1. This approach comes at the cost of disk space and I/O time. A fast SSD or using a RAM drive are worth considering.
 
-It was a side goal to allow execution on a massively parallel enviornment like an HPC cluster for discrete phases. Then to pull the results into a central system for further processing, analysis, and long term storage. This goal has yet to be realized. 
+In case you're using Ubuntu, there is a preconfigured RAM drive available at `/dev/shm` that is by default 1/2 of your system's total RAM. A second option is to mount a RAMDISK to a path of your choosing using `tmpfs`.
 
+It was a side goal to allow execution on a massively parallel environment like an AWS cluster, then to pull the results into a central system for further processing, analysis, and long term storage. This goal has yet to be implemented.
 
-### Autoencoding
+### Unsupervised learning
 TODO
-
 
 ### Affiliations
 This package was developed with support from the BioImageInformatics Lab at Cedars Sinai Medical Center, Los Angeles, CA.

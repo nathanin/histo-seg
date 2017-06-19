@@ -26,11 +26,6 @@ and spits out tilemap
         just take the union.
 
 
-changelog
----------
-2017-04-18:
-    Initial
-
 '''
 
 
@@ -92,7 +87,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
