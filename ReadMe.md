@@ -42,7 +42,13 @@ Training/
     img002.png
 ```
 
-In histopathology, training data must be curated with the domain knowledge of a trained pathologist. Annotation scarcity is well documented in the field (citations), and represents a significant bottleneck in training data-driven models. Therefore, it's common to use data augmentation pre-processing steps which effectively multiply the area used for training. Some data augmentation implemented here includes:
+Once the images are prepared you can use the `data_pipeline.py` script to multiply the raw data into training and validation sets.
+
+```
+$ python ~/histo-seg/core/data_pipeline.py 512 10 dataset_01
+```
+
+This command sub-samples each image 10 times at 512 px windows. It saves the results into a directory `dataset_01`. In histopathology, training data must be curated with the domain knowledge of a trained pathologist. Annotation scarcity is well documented in the field (citations), and represents a significant bottleneck in training data-driven models. Therefore, it's common to use data augmentation pre-processing steps which effectively multiply the area used for training. Some data augmentation implemented here includes:
 * Random sub-sampling, including over-sampling
 * Color augmentation in LAB space
 * Image rotation
@@ -56,6 +62,13 @@ Processing happens in 3 phases:
 * Data preparation from Whole Slide Images (WSI) and low-level ROI finding
 * High-resolution discretized processing
 * Process results agglomeration and report generation
+
+The script `histo_pipeline.py` will run the WSI pipeline on `svs` files found in a user defined directory.
+
+Example usage:
+```
+$ python ~/histo-seg/core/histo_pipeline.py
+```
 
 These phases are implemented as individual packages, together composing the "core" module. Since each phase depends only on the previous phase being completed, they are executable in isolation for fast idea prototyping. For example, I have 10 slides to process. Phase 1 performs the basic tissue-finding and tiling well. There is no longer much need to repeat phase 1 if I want to try options in phases 2 and 3, so we recycle the output of phase 1. This approach comes at the cost of disk space and I/O time. A fast SSD or using a RAM drive are worth considering.
 

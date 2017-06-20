@@ -18,7 +18,7 @@ Position args: [1] scale - integer - square length
 
 ----------------------------------------------------
 Usage:
-$ python ~/histo-seg/core/data_pipeline.py dataset_01
+$ python ~/histo-seg/core/data_pipeline.py 512 10 dataset_01
 
 
 ing.nathany@gmail.com
@@ -215,7 +215,6 @@ def multiply_data(src, anno, scales = [512], multiplicity = [9]):
 def make_segmentation_training(src, anno, root, scales, multiplicity):
     multiply_data(src, anno, scales, multiplicity)
     return makelist(src, anno, root)
-
 
 if __name__ == "__main__":
     # scales = [1024]
