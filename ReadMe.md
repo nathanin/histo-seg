@@ -1,15 +1,16 @@
 ## Histo-Seg
-The core functions are:
+Summary:
 
-* Provide headache free processing to reassembly of Gigapixel sized images through the [openslide](http://openslide.org) library and Convolutional Neural Networks.
+* Processing to reassembly framework for Gigapixel sized images through the [openslide](http://openslide.org) library and Convolutional Neural Networks.
+* A framework to explore machine learning methods applied to digital pathology image analysis.
 
-* A framework to explore state of the art machine learning methods in application to digital pathology image analysis.
-
-See our publication [HERE].
+See the publication [HERE].
 
 Segmentation and semantic labelling using the [SegNet](http://mi.eng.cam.ac.uk/projects/segnet/) architecture ([github](https://github.com/alexgkendall/caffe-segnet)). An interesting post-processing layer implementing Conditional Random Fields ([CRFasRNN](https://github.com/torrvision/crfasrnn)) is optional. Note that these two architectures use layers unavailable in `caffe-master`. A merger of the two custom branches can be found ([here](https://github.com/nathanin/caffe-segnet-crf)).
 
 Other methods (e.g. FCN) that take in images and produce label matrices can be quickly substituted as an alternative.
+
+It should be straightforward to take models defined in other libraries with Python front-ends (i.e. Tensorflow) and use them in this framework. I'll get on implementing a quick example.
 
 
 ### Example Use Cases
