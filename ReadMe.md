@@ -1,8 +1,5 @@
 ## Histo-Seg
-Summary:
-
-* Processing to reassembly framework for Gigapixel sized images through the [openslide](http://openslide.org) library and Convolutional Neural Networks.
-* A framework to explore machine learning methods applied to digital pathology image analysis.
+Histo-Seg is a framework for rapid prototyping of image analysis methods applied to digital pathology whole slide images. It uses the [openslide](http://openslide.org) library to read from `svs` image pyramids. Really it's a set of functions strung together with a couple "pipeline" scripts. Development is mostly to facilitate certain projects. Please leave reviews, feedback and functional suggestions in the Issues section.
 
 See the publication [HERE].
 
@@ -79,6 +76,9 @@ It was a side goal to allow execution on a massively parallel environment like a
 
 ### Unsupervised learning
 TODO
+
+### Features visualization & WSI feature heat maps
+IN PLANNING
 
 ### Affiliations
 This package was developed with support from the BioImageInformatics Lab at Cedars Sinai Medical Center, Los Angeles, CA.
