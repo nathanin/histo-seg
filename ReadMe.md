@@ -1,5 +1,5 @@
 ## Histo-Seg
-Histo-Seg is a framework for rapid prototyping of image analysis methods applied to digital pathology whole slide images. It uses the [openslide](http://openslide.org) library to read from `svs` image pyramids. Really it's a set of functions strung together with a couple "pipeline" scripts. Development is mostly to facilitate certain projects. Please leave reviews, feedback and functional suggestions in the Issues section.
+Histo-Seg is a framework for rapid prototyping of image analysis methods applied to digital pathology whole slide images. It uses the [openslide](http://openslide.org) library to read from `svs` image pyramids. Really it's a set of functions strung together with a couple "pipeline" scripts. Development is mostly to facilitate certain projects. Please leave reviews, feedback and functional suggestions in the Issues section. I'm consistently aiming to simplify the internal code to promote extendability.
 
 See the publication [HERE].
 
