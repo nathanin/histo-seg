@@ -1,4 +1,11 @@
-#!/usr/local/bin/python
+'''
+histo_pipeline.py
+
+Pipeline functions for managing multiple iterations of WSI processing.
+
+
+TODO NEXT !! URGENT documentation
+'''
 
 import data
 import histoseg
@@ -21,23 +28,8 @@ from matplotlib.table import Table
 from matplotlib import rcParams
 from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
-
 rcParams.update({'figure.autolayout': True})
-'''
 
-histo_pipeline.py
-
-ACTUAL pipeline not that fragmented thing called seg_pipeline
-Do everything for each slide in a row, instead of separately.
-That thing about splitting up different components of the pipeline
-was a terrible idea
-the worst. and i know a thing or two about bad ideas.
-
-the worst part of that bad idea was all the options.
-just get rid of all the options.
-
-
-'''
 
 
 def record_processing(repf, st):
@@ -101,9 +93,7 @@ def init_file_system(**kwargs):
 
 
 def whitespace(img, reportfile, white_pt=210):
-    # Simple. Could be more sophisticated
     background = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    # background = cv2.GaussianBlur(img, (7,7), 0)
     bcg_level, background = cv2.threshold(background, 0, 255,
                                           cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))
@@ -119,12 +109,11 @@ def whitespace(img, reportfile, white_pt=210):
 
 
 def read_region(wsi, start, level, dims):
-    # Utility function because openslide is weird
+    # Utility function because openslide loads as RGBA
     img = wsi.read_region(start, level, dims)
     img = np.array(img)
     img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
     return img
 
 
@@ -148,9 +137,7 @@ def get_process_map(img, tilesize, masks, reportfile):
     # The downsampling will be ~10x
     #mask = cv2.resize(mask, dsize=(nrow, ncol),
     #                  interpolation = cv2.INTER_NEAREST)
-
     return mask
-
 
 def preprocessing(**kwargs):
     wsi = OpenSlide(kwargs['filename'])
@@ -165,12 +152,6 @@ def preprocessing(**kwargs):
     whitemap = whitespace(img, kwargs['reportfile'])
 
     # TODO (nathan) add tumor location here
-    #unprocessable = unprocessable_area(img)
-    # I don't think an H& E will really do it.
-    # It'll take some mighty processing to get the job done
-    # I mean like.. it's probabaly doable.
-    # OK I'll try tomorrow.
-
     lo_res = 128
     masks = [whitemap]
     process_map = get_process_map(img, lo_res, masks, kwargs['reportfile'])

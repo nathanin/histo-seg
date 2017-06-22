@@ -14,7 +14,7 @@ import numpy as np
 import generate_color
 
 try:
-    CAFFE_ROOT = '/home/nathan/caffe-segnet-cudnn5'
+    CAFFE_ROOT = '/home/nathan/caffe-segnet-crf'
     sys.path.insert(0, CAFFE_ROOT + "/python")
     import caffe
 except:
@@ -159,7 +159,10 @@ def process(exphome,
 
     listfile = write_list_densedata(expdirs[0], exphome)
     model = substitute_img_list(model_template, exphome, listfile)
+
+    ## Initialize a network - reference implementation uses pycaffe
     net = init_net(model, weights, mode, GPU_ID)
+
     imgs = list_imgs(path=expdirs[0])
 
     # TODO PULL NUMBER  COLORS FROM NET DEF
