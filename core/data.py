@@ -50,66 +50,66 @@ def PrintFrame():
 ##################################################################
 
 
-def flip(t):
-    pass  # make_data.py
+# def flip(t):
+#     pass  # make_data.py
+#
+#
+# def rotate(img, rotation_matrix):
+#     img = cv2.warpAffine(src=img, M=rotation_matrix, dsize=(img.shape[0:2]))
+#     return img
+#
+#
+# def data_rotate(t, iters, ext='jpg', mode='3ch', writesize=256):
+#     center = (writesize / 2 - 1, writesize / 2 - 1)
+#     rotation_matrix = cv2.getRotationMatrix2D(
+#         center=center, angle=90, scale=1.0)
+#
+#     img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
+#     for name in img_list:
+#         if mode == '3ch':
+#             img = cv2.imread(name)
+#         elif mode == '1ch':
+#             #img = cv2.imread(name, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+#             img = cv2.imread(name)
+#             #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
+#
+#         for k in range(iters):
+#             name = name.replace('.' + ext, 'r.' + ext)
+#             #print name
+#             img = rotate(img, rotation_matrix)
+#             cv2.imwrite(filename=name, img=img)
+#
+#     print '\tDone rotating images in {}'.format(t)
+#
+# ## Keep this here because I think i use it in inference
+# def coloration(img, l_mean, l_std):
+#     target = np.array([[l_mean, l_std], [169.3, 9.01], [105.97, 6.67]])
+#     return cnorm.normalize(img, target)
 
 
-def rotate(img, rotation_matrix):
-    img = cv2.warpAffine(src=img, M=rotation_matrix, dsize=(img.shape[0:2]))
-    return img
-
-
-def data_rotate(t, iters, ext='jpg', mode='3ch', writesize=256):
-    center = (writesize / 2 - 1, writesize / 2 - 1)
-    rotation_matrix = cv2.getRotationMatrix2D(
-        center=center, angle=90, scale=1.0)
-
-    img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
-    for name in img_list:
-        if mode == '3ch':
-            img = cv2.imread(name)
-        elif mode == '1ch':
-            #img = cv2.imread(name, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-            img = cv2.imread(name)
-            #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
-
-        for k in range(iters):
-            name = name.replace('.' + ext, 'r.' + ext)
-            #print name
-            img = rotate(img, rotation_matrix)
-            cv2.imwrite(filename=name, img=img)
-
-    print '\tDone rotating images in {}'.format(t)
-
-
-def coloration(img, l_mean, l_std):
-    target = np.array([[l_mean, l_std], [169.3, 9.01], [105.97, 6.67]])
-    return cnorm.normalize(img, target)
-
-
-def data_coloration(t, mode, ext):
-    # TODO (nathan) make this whole thing not stupid 
-    # TODO replace with random  numbers generated from uniform distrib.
-    l_mean_range = (150.3, 144.05, 140.5, 135.2, 130.22)
-    l_std_range = (40.23, 35.00, 35.00, 37.5, 40.23)
-    # l_mean_range = (144.048, 130.22, 135.5, 140.0)
-    # l_std_range = (40.23, 35.00, 35.00, 37.5)
-
-    img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
-    for idx, name in enumerate(img_list):
-        if idx % 500 == 0:
-            print '\tcolorizing {} of {}'.format(idx, len(img_list))
-            for LMN, LSTD in zip(l_mean_range, l_std_range):
-                name_out = name.replace('.' + ext, 'c.' + ext)
-                if mode == 'feat':
-                    img = cv2.imread(name)
-                    img = coloration(img, LMN, LSTD)
-                    cv2.imwrite(filename=name_out, img=img)
-                elif mode == 'anno':
-                    img = cv2.imread(name)
-                    cv2.imwrite(filename=name_out, img=img)
-
-    print '\tDone color augmenting images in {}'.format(t)
+# def data_coloration(t, mode, ext):
+#     # TODO (nathan) make this whole thing not stupid
+#     # TODO replace with random  numbers generated from uniform distrib.
+#     l_mean_range = (150.3, 144.05, 140.5, 135.2, 130.22)
+#     l_std_range = (40.23, 35.00, 35.00, 37.5, 40.23)
+#     # l_mean_range = (144.048, 130.22, 135.5, 140.0)
+#     # l_std_range = (40.23, 35.00, 35.00, 37.5)
+#
+#     img_list = sorted(glob.glob(os.path.join(t, '*.' + ext)))
+#     for idx, name in enumerate(img_list):
+#         if idx % 500 == 0:
+#             print '\tcolorizing {} of {}'.format(idx, len(img_list))
+#             for LMN, LSTD in zip(l_mean_range, l_std_range):
+#                 name_out = name.replace('.' + ext, 'c.' + ext)
+#                 if mode == 'feat':
+#                     img = cv2.imread(name)
+#                     img = coloration(img, LMN, LSTD)
+#                     cv2.imwrite(filename=name_out, img=img)
+#                 elif mode == 'anno':
+#                     img = cv2.imread(name)
+#                     cv2.imwrite(filename=name_out, img=img)
+#
+#     print '\tDone color augmenting images in {}'.format(t)
 
 
 def writeList(src, anno):
@@ -122,150 +122,153 @@ def writeList(src, anno):
     pass
 
 
-def random_crop(h, w, edge):
-    minx = 0
-    miny = 0
-    maxx = w - edge
-    maxy = h - edge
-    x = np.random.randint(minx, maxx)
-    y = np.random.randint(miny, maxy)
-    x2 = x + edge
-    y2 = y + edge
-
-    return [x, x2, y, y2]
-
-
-def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
-    # In contrast to split, do a random crop n times
-
-    # img_list = sorted(glob.glob(os.path.join(path, '*.'+ext)))
-    example = cv2.imread(img_list[0])
-    h, w = example.shape[0:2]
-
-    # Keep track of the randomly generated coordinates
-    if coords == 0:
-        gencoord = True
-        coords = [0] * len(img_list)
-    else:
-        gencoord = False
-
-    for index, (name, c) in enumerate(zip(img_list, coords)):
-        img = cv2.imread(name)
-        name = name.replace('.' + ext, '_{}.{}'.format(edge, ext))
-
-        # print coord
-        if gencoord:
-            coordsout = np.zeros(shape=(n, 4), dtype=np.uint32)
-
-        for i in range(n):
-            if gencoord:
-                x, x2, y, y2 = random_crop(h, w, edge=edge)
-                coordsout[i, :] = [x, x2, y, y2]
-            else:
-                x, x2, y, y2 = c[i, :]
-
-            name = name.replace('.' + ext, 's.' + ext)
-
-            if mode == '3ch':
-                subimg = img[x:x2, y:y2, :]
-                subimg = cv2.resize(
-                    subimg,
-                    dsize=(writesize, writesize),
-                    interpolation=cv2.INTER_LINEAR)
-            elif mode == '1ch':
-                subimg = img[x:x2, y:y2, :]
-                subimg = cv2.resize(
-                    subimg,
-                    dsize=(writesize, writesize),
-                    interpolation=cv2.INTER_NEAREST)
-
-            # this is always going to write
-            # linter places it in there with the others
-            cv2.imwrite(filename=name, img=subimg)
-
-            if gencoord:
-                coords[index] = coordsout
-
-    return coords
+# def random_crop(h, w, edge):
+#     minx = 0
+#     miny = 0
+#     maxx = w - edge
+#     maxy = h - edge
+#     x = np.random.randint(minx, maxx)
+#     y = np.random.randint(miny, maxy)
+#     x2 = x + edge
+#     y2 = y + edge
+#
+#     return [x, x2, y, y2]
 
 
-def delete_list(imglist):
-    print 'Removing {} files'.format(len(imglist))
-    for img in imglist:
-        os.remove(img)
+# def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
+#     # In contrast to split, do a random crop n times
+#
+#     # img_list = sorted(glob.glob(os.path.join(path, '*.'+ext)))
+#     example = cv2.imread(img_list[0])
+#     h, w = example.shape[0:2]
+#
+#     # Decide to use previous coordinates or to keep track of them
+#     # Keep track of the randomly generated coordinates
+#     if coords == 0:
+#         gencoord = True
+#         coords = [0] * len(img_list)
+#     else:
+#         gencoord = False
+#
+#     for index, (name, c) in enumerate(zip(img_list, coords)):
+#         img = cv2.imread(name)
+#         name = name.replace('.' + ext, '_{}.{}'.format(edge, ext))
+#
+#         # print coord
+#         if gencoord:
+#             coordsout = np.zeros(shape=(n, 4), dtype=np.uint32)
+#
+#         for i in range(n):
+#             if gencoord:
+#                 x, x2, y, y2 = random_crop(h, w, edge=edge)
+#                 coordsout[i, :] = [x, x2, y, y2]
+#             else:
+#                 x, x2, y, y2 = c[i, :]
+#
+#             name = name.replace('.' + ext, 's.' + ext)
+#
+#             if mode == '3ch':
+#                 subimg = img[x:x2, y:y2, :]
+#                 subimg = cv2.resize(
+#                     subimg,
+#                     dsize=(writesize, writesize),
+#                     interpolation=cv2.INTER_LINEAR)
+#             elif mode == '1ch':
+#                 subimg = img[x:x2, y:y2, :]
+#                 subimg = cv2.resize(
+#                     subimg,
+#                     dsize=(writesize, writesize),
+#                     interpolation=cv2.INTER_NEAREST)
+#
+#             # this is always going to write
+#             # linter places it in there with the others
+#             cv2.imwrite(filename=name, img=subimg)
+#
+#             if gencoord:
+#                 coords[index] = coordsout
+#
+#     return coords
 
 
-def multiply_one_folder(src):
-    '''
-    I think this is a good idea. 1-26-17
-    '''
-    print '\nAffirm that \n {} is not the original dir.'.format(src)
-    choice = input('I have made copies (1) or not (anything else) \t')
-    if choice == 1:
-        print 'Continuing'
-    else:
-        print 'Make a copy of the data first. TODO make this less dumb.'
-        return 0  # break
-
-    print 'Rotating images in {}'.format(src)
-    data_rotate(src, 3, ext='jpg')
-    print 'Modulating color for data in {}.'.format(src)
-    data_coloration(src, 'feat', 'jpg')
+## Commented out 6-22-17
+# def delete_list(imglist):
+#     print 'Removing {} files'.format(len(imglist))
+#     for img in imglist:
+#         os.remove(img)
 
 
-def multiply_data(src, anno, scales = [512], multiplicity = [9]):
-    '''
-    Define a set of transformations, to be applied sequentially, to images.
-    For each image, track it's annotation image and copy the relevant transformations.
+## Commented out 6-22-17
+# def multiply_one_folder(src):
+#     '''
+#     I think this is a good idea.
+#     '''
+#     print '\nAffirm that \n {} is not the original dir.'.format(src)
+#     choice = input('I have made copies (1) or not (anything else) \t')
+#     if choice == 1:
+#         print 'Continuing'
+#     else:
+#         print 'Make a copy of the data first. TODO make this less dumb.'
+#         return 0  # break
+#
+#     print 'Rotating images in {}'.format(src)
+#     data_rotate(src, 3, ext='jpg')
+#     print 'Modulating color for data in {}.'.format(src)
+#     data_coloration(src, 'feat', 'jpg')
 
-    This should work for any sort fo experiment where
-    - annotation images are contained in one dir
-    - similary named source images are contained in their own dir
-    - we want them to be multiplied
-
-    '''
-
-    print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(
-        src, anno)
-    choice = input('I have made copies. (1/no) ')
-
-    if choice == 1:
-        print 'Continuing'
-    else:
-        print 'non-1 response. exiting TODO: Make this nicer'
-        return 0
-
-    if len(scales) != len(multiplicity):
-        print 'Warning: scales and multiplicity must match lengths'
-        return 0
-
-    srclist = sorted(glob.glob(os.path.join(src, '*.jpg')))
-    annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
-
-    # Multi-scale
-    for scale, numbersub in zip(scales, multiplicity):
-        print 'Extracting {} subregions of size {}'.format(numbersub, scale)
-        coords = sub_img(
-            srclist, ext='jpg', mode='3ch', edge=scale, n=numbersub)
-        print 'Repeating for png'
-        _ = sub_img(
-            annolist,
-            ext='png',
-            mode='1ch',
-            edge=scale,
-            coords=coords,
-            n=numbersub)
-
-
-    # Now it's OK to remove the originals
-    delete_list(srclist)
-    delete_list(annolist)
-
-    data_coloration(src, 'feat', 'jpg')
-    data_coloration(anno, 'anno', 'png')
-
-    data_rotate(src, 3, ext='jpg', mode='3ch')
-    data_rotate(anno, 3, ext='png', mode='1ch')
+## Commented out 6-22-17
+# def multiply_data(src, anno, scales = [512], multiplicity = [9]):
+#     '''
+#     Define a set of transformations, to be applied sequentially, to images.
+#     For each image, track it's annotation image and copy the relevant transformations.
+#
+#     This should work for any sort fo experiment where
+#     - annotation images are contained in one dir
+#     - similary named source images are contained in their own dir
+#     - we want them to be multiplied
+#
+#     '''
+#
+#     print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(
+#         src, anno)
+#     choice = input('I have made copies. (1/no) ')
+#
+#     if choice == 1:
+#         print 'Continuing'
+#     else:
+#         print 'non-1 response. exiting TODO: Make this nicer'
+#         return 0
+#
+#     if len(scales) != len(multiplicity):
+#         print 'Warning: scales and multiplicity must match lengths'
+#         return 0
+#
+#     srclist = sorted(glob.glob(os.path.join(src, '*.jpg')))
+#     annolist = sorted(glob.glob(os.path.join(anno, '*.png')))
+#
+#     # Multi-scale
+#     for scale, numbersub in zip(scales, multiplicity):
+#         print 'Extracting {} subregions of size {}'.format(numbersub, scale)
+#         coords = sub_img(
+#             srclist, ext='jpg', mode='3ch', edge=scale, n=numbersub)
+#         print 'Repeating for png'
+#         _ = sub_img(
+#             annolist,
+#             ext='png',
+#             mode='1ch',
+#             edge=scale,
+#             coords=coords,
+#             n=numbersub)
+#
+#
+#     # Now it's OK to remove the originals
+#     delete_list(srclist)
+#     delete_list(annolist)
+#
+#     data_coloration(src, 'feat', 'jpg')
+#     data_coloration(anno, 'anno', 'png')
+#
+#     data_rotate(src, 3, ext='jpg', mode='3ch')
+#     data_rotate(anno, 3, ext='png', mode='1ch')
 
 
 def find_bcg(wsi):
@@ -829,5 +832,3 @@ if __name__ == '__main__':
         nclass=5,
         whiteidx=3,
         tileonly=True)
-
-
