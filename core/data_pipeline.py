@@ -23,13 +23,13 @@ Usage:
 $ python ~/histo-seg/core/data_pipeline.py 512 10 dataset_01
 
 
-ing.nathany@gmail.com
-nathan.ing@cshs.org
+ing.nathany [at] gmail [dot] com
+nathan [dot] ing [at] cshs [dot] org
 
 '''
 
 
-from openslide import OpenSlide
+# from openslide import OpenSlide
 import cv2
 import colorNormalization as cnorm
 import numpy as np
@@ -42,6 +42,7 @@ import sys
 # /home/nathan/histo-seg/code/data_pipeline.py
 # def make_classification_training(src):
 #	 data.multiply_one_folder(src);
+
 
 
 '''
@@ -97,6 +98,11 @@ def makelist(src, anno, dst):
 
     return listfile
 #/end makelist
+
+
+
+
+
 
 '''
 For visualizing image-mask pairs
@@ -188,6 +194,11 @@ def data_rotate(img_dir, iters, ext='jpg', mode='3ch', writesize=256):
 
 
 
+
+
+
+
+
 '''
 Applies the color targets in `l_mean_range` and `l_std_range` to
 the images in img_dir, saving copies each time.
@@ -198,6 +209,9 @@ However, this sometimes results in unnatural looking results. These settings
 were chosen because they're similar to plausible staining characteristics.
 
 Should still switch it to use a random delta though.
+
+Takes two modes: 'feat' or 'anno'. If mode is anno, the images are
+rewritten as-is, with the corresponding name appendage
 
 The function appends a 'c' to the filenames.
 '''
@@ -233,6 +247,9 @@ def data_coloration(img_dir, mode, ext):
 #/end data_coloration
 
 
+
+
+
 '''
 Returns the bounding box coordinates given height, width, and
 a window size ("edge").
@@ -256,6 +273,10 @@ def random_crop(h, w, edge):
 
     return [x, x2, y, y2]
 #/end random_crop
+
+
+
+
 
 
 '''
@@ -345,6 +366,10 @@ def delete_list(imglist):
 
 
 
+
+
+
+
 '''
 Define a set of transformations, to be applied sequentially, to images.
 For each image, track it's annotation image and copy the relevant transformations.
@@ -355,7 +380,7 @@ This should work for any sort fo experiment where
 - we want them to be multiplied
 
 '''
-def multiply_data(src, anno, scales = [512], multiplicity = [9]):
+def multiply_data(src, anno, scales = [512], multiplicity = [9], do_color=True, do_rotate=True):
 
     print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(
         src, anno)
@@ -396,27 +421,30 @@ def multiply_data(src, anno, scales = [512], multiplicity = [9]):
     delete_list(srclist)
     delete_list(annolist)
 
-    data_coloration(src, 'feat', 'jpg')
-    data_coloration(anno, 'anno', 'png')
+    if do_color:
+        print 'Augmenting color'
+        data_coloration(src, 'feat', 'jpg')
+        data_coloration(anno, 'anno', 'png')
+    #/end if
 
-    data_rotate(src, 3, ext='jpg', mode='3ch')
-    data_rotate(anno, 3, ext='png', mode='1ch')
+    if do_rotate:
+        print 'Augmenting orientation'
+        data_rotate(src, 3, ext='jpg', mode='3ch')
+        data_rotate(anno, 3, ext='png', mode='1ch')
+    #/end if
 # /end multiply_data
 
-def make_segmentation_training(src, anno, root, scales, multiplicity):
-    multiply_data(src, anno, scales, multiplicity)
+def make_segmentation_training(src, anno, root, scales, multiplicity, do_color=True, do_rotate=True):
+    multiply_data(src, anno, scales, multiplicity, do_color, do_rotate)
     return makelist(src, anno, root)
 # /end make_segmentation_training
 
 if __name__ == "__main__":
-    scales = [512]
+    scales = [256]
     multiplicity = [10]
     dataset_root = sys.argv[1]
 
-    #dataset_root = '/home/nathan/semantic-pca/data/seg_0.9'
-
     root = os.path.join(dataset_root, 'train')
-    #root = '/home/nathan/semantic-pca/data/seg_0.8/train'
     src = os.path.join(root, 'jpg')
     anno = os.path.join(root, 'mask')
     listfile = make_segmentation_training(src, anno, root, scales, multiplicity)
@@ -426,9 +454,9 @@ if __name__ == "__main__":
     # Validation, do less.
     multiplicity = [3]
     root = os.path.join(dataset_root, 'val')
-    #root = '/home/nathan/semantic-pca/data/seg_0.8/val'
     src = os.path.join(root, 'jpg')
     anno = os.path.join(root, 'mask')
-    listfile = make_segmentation_training(src, anno, root, scales, multiplicity)
+    listfile = make_segmentation_training(src, anno, root, scales, multiplicity,
+        do_color=False, do_rotate=False)
     ## TODO add option for drawing overlays
     # impose_overlay(listfile, os.path.join(root, 'anno_cmap'))
