@@ -10,8 +10,6 @@ Several data augmentation strategies are applied.
     - 90 degrees rotation
 
 
-See ReadMe.md for a minimal use case
-
 ----------------------------------------------------
 Arguments:
 Position args: [1] scale - integer - square length
@@ -34,6 +32,7 @@ import cv2
 import colorNormalization as cnorm
 import numpy as np
 
+import itertools
 import glob
 import shutil
 import os
@@ -153,12 +152,15 @@ pretty commonthing to do.
 eh.
 '''
 def rotate(img, rotation_matrix):
-    img = cv2.warpAffine(src=img, M=rotation_matrix, dsize=(img.shape[0:2]))
+    img = cv2.warpAffine(src=img, M=rotation_matrix, dsize=(img.shape[0:2]),
+        borderMode=cv2.BORDER_REPLICATE)
     return img
 #/end rotate
 
 
 '''
+FIXME! produces a 0-border for even sized images
+
 Reads images in img_dir and rotates them `iters` times by 90deg
 
 I should probably infer the center for each image,
@@ -167,7 +169,8 @@ but assume all of them are uniformly square.
 This function appends an 'r' to the filename each rotation.
 '''
 def data_rotate(img_dir, iters, ext='jpg', mode='3ch', writesize=256):
-    center = (writesize / 2 - 1, writesize / 2 - 1)
+
+    center = (writesize / 2 - 1 , writesize / 2 - 1)
     rotation_matrix = cv2.getRotationMatrix2D(
         center=center, angle=90, scale=1.0)
 
@@ -177,14 +180,19 @@ def data_rotate(img_dir, iters, ext='jpg', mode='3ch', writesize=256):
             img = cv2.imread(name)
         elif mode == '1ch':
             #img = cv2.imread(name, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-            img = cv2.imread(name)
+            img = cv2.imread(name, 0)
             #img = cv2.applyColorMap(img, cv2.COLORMAP_HSV)
         #/end if
+
+        # if img.shape[0] % 2 == 0:
+        #     img = cv2.resize(img, dsize=(writesize+1, writesize+1),
+        #         interpolation=cv2.INTER_NEAREST)
 
         for k in range(iters):
             name = name.replace('.' + ext, 'r.' + ext)
             #print name
             img = rotate(img, rotation_matrix)
+
             cv2.imwrite(filename=name, img=img)
         #/end for
     #/end for
@@ -214,28 +222,37 @@ Takes two modes: 'feat' or 'anno'. If mode is anno, the images are
 rewritten as-is, with the corresponding name appendage
 
 The function appends a 'c' to the filenames.
+
+# TODO make this use copy for masks
 '''
 def data_coloration(img_dir, mode, ext):
     '''
     LOL
     '''
     # TODO replace with random  numbers generated from uniform distrib.
-    l_mean_range = (144.048, 130.22, 135.5, 140.0)
-    l_std_range = (40.23, 35.00, 35.00, 37.5)
+    # l_mean_range = (144.048, 130.22, 135.5, 140.0)
+    # l_std_range = (40.23, 35.00, 35.00, 37.5)
+    l_mean_range = [144.048]
+    l_std_range = [40.23]
 
     img_list = sorted(glob.glob(os.path.join(img_dir, '*.' + ext)))
     for idx, name in enumerate(img_list):
+        if mode == 'feat':
+            img = cv2.imread(name)
+        elif mode == 'anno':
+            img = cv2.imread(name, 0)
+        else:
+            print 'Unknown mode'
+            return 0
+        #/end if
         for LMN, LSTD in zip(l_mean_range, l_std_range):
             target = np.array([[LMN, LSTD], [169.3, 9.01], [105.97, 6.67]])
-            name_out = name.replace('.'+ext, 'c.'+ext)
+            name = name.replace('.'+ext, 'c.'+ext)
             if mode == 'feat':
-                img = cv2.imread(name)
-                # img = data.coloration(img, LMN, LSTD)
-                img = cnorm.normalize(img, target)
-                cv2.imwrite(filename=name_out, img=img)
+                img_out = cnorm.normalize(img, target)
+                cv2.imwrite(filename=name, img=img_out)
             elif mode == 'anno':
-                img = cv2.imread(name)
-                cv2.imwrite(filename=name_out, img=img)
+                cv2.imwrite(filename=name, img=img)
             # end if
         # /end for
         if idx % 500 == 0:
@@ -259,6 +276,12 @@ returns (x1, x2, y1, y2)
 use like this:
 bbox = random_crop(h,w,edge)
 img_crop = img[bbox[0]: bbox[1], bbox[0]:bbox[1], ...]
+
+Other option is to modify this to accept minx and miny Arguments
+that way we force the windows to shift around
+and also make it nice and random.
+
+TODO
 '''
 ## Moved from data.py 6-22-17
 def random_crop(h, w, edge):
@@ -297,6 +320,19 @@ other function in here.
 I'll implement it next time.
 
 This function appends an 's' to each new subimage name
+
+# Jun 28, 2017 - change to grid based cutting
+# introduces some badness because n in is no longer exactly the number we
+# push out. It is if n is a perfect square. Otherwise it's rounded
+# to be the closest perfect square on the lower end. Allows oversampling
+# but also covers the whole tile
+
+Could add cases to return the exact number. that way we'd randomize it a little
+and still make use of that coords passing argument
+remains to be seen if this is useful
+input: 1,2,3 : output: 4
+input: 4,5,6,7,8 : output 9
+etc.
 '''
 def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
     # In contrast to split, do a random crop n times
@@ -309,24 +345,33 @@ def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
     # Keep track of the randomly generated coordinates
     if coords == 0:
         gencoord = True
-        coords = [0] * len(img_list)
+        sqrt_n = int(np.floor(np.sqrt(n)))
+        max_x1 = w-edge
+        max_y1 = h-edge
+        x_step = max_x1 / sqrt_n
+        y_step = max_y1 / sqrt_n
+        xcoords = range(0, max_x1+1, x_step)
+        ycoords = range(0, max_y1+1, y_step)
+        coords = [c for c in itertools.product(xcoords, ycoords)]
+        coords = [(x, x+edge, y, y+edge) for x, y in coords]
+        coordsout = coords
     else:
-        gencoord = False
+        coordsout = coords
 
-    for index, (name, c) in enumerate(zip(img_list, coords)):
+    for index, name in enumerate(img_list):
         img = cv2.imread(name)
         name = name.replace('.' + ext, '_{}.{}'.format(edge, ext))
 
         # print coord
-        if gencoord:
-            coordsout = np.zeros(shape=(n, 4), dtype=np.uint32)
+        # if gencoord:
+        #     coordsout = np.zeros(shape=(n, 4), dtype=np.uint32)
 
-        for i in range(n):
-            if gencoord:
-                x, x2, y, y2 = random_crop(h, w, edge=edge)
-                coordsout[i, :] = [x, x2, y, y2]
-            else:
-                x, x2, y, y2 = c[i, :]
+        for x, x2, y, y2 in coords:
+            # if gencoord:
+            #     x, x2, y, y2 = random_crop(h, w, edge=edge)
+            #     coordsout[i, :] = [x, x2, y, y2]
+            # else:
+            #     x, x2, y, y2 = c_[i, :]
             # /end if
 
             name = name.replace('.' + ext, 's.' + ext)
@@ -349,8 +394,8 @@ def sub_img(img_list, ext, mode='3ch', edge=512, writesize=256, n=8, coords=0):
             # linter kinda insists on indenting it
             cv2.imwrite(filename=name, img=subimg)
 
-            if gencoord:
-                coords[index] = coordsout
+            # if gencoord:
+            #     coords[index] = coordsout
             # /end if
         # /end for
 
@@ -382,16 +427,15 @@ This should work for any sort fo experiment where
 '''
 def multiply_data(src, anno, scales = [512], multiplicity = [9], do_color=True, do_rotate=True):
 
-    print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(
-        src, anno)
-    choice = input('I have made copies. (1/no) ')
-
-    if choice == 1:
-        print 'Continuing'
-    else:
-        print 'non-1 response. exiting TODO: Make this nicer'
-        return 0
-    # /end if
+    #print '\nAffirm that files in\n>{} \nand \n>{} \nare not originals.\n'.format(
+    #    src, anno)
+    #choice = input('I have made copies. (1/no) ')
+    #if choice == 1:
+    #    print 'Continuing'
+    #else:
+    #    print 'non-1 response. exiting TODO: Make this nicer'
+    #    return 0
+    ## /end if
 
     if len(scales) != len(multiplicity):
         print 'Warning: scales and multiplicity must match lengths'
@@ -403,7 +447,7 @@ def multiply_data(src, anno, scales = [512], multiplicity = [9], do_color=True, 
 
     # Multi-scale
     for scale, numbersub in zip(scales, multiplicity):
-        print 'Extracting {} subregions of size {}'.format(numbersub, scale)
+        print 'Extracting subregions of size {}'.format(numbersub, scale)
         coords = sub_img(
             srclist, ext='jpg', mode='3ch', edge=scale, n=numbersub)
         print 'Repeating for png'
@@ -428,7 +472,7 @@ def multiply_data(src, anno, scales = [512], multiplicity = [9], do_color=True, 
     #/end if
 
     if do_rotate:
-        print 'Augmenting orientation'
+        print 'Spinning'
         data_rotate(src, 3, ext='jpg', mode='3ch')
         data_rotate(anno, 3, ext='png', mode='1ch')
     #/end if
@@ -440,8 +484,8 @@ def make_segmentation_training(src, anno, root, scales, multiplicity, do_color=T
 # /end make_segmentation_training
 
 if __name__ == "__main__":
-    scales = [256]
-    multiplicity = [10]
+    scales = [512]
+    multiplicity = [3]
     dataset_root = sys.argv[1]
 
     root = os.path.join(dataset_root, 'train')
@@ -449,7 +493,7 @@ if __name__ == "__main__":
     anno = os.path.join(root, 'mask')
     listfile = make_segmentation_training(src, anno, root, scales, multiplicity)
     ## TODO add option for drawing overlays
-    # impose_overlay(listfile, os.path.join(root, 'anno_cmap'))
+    impose_overlay(listfile, os.path.join(root, 'anno_cmap'))
 
     # Validation, do less.
     multiplicity = [3]
@@ -459,4 +503,4 @@ if __name__ == "__main__":
     listfile = make_segmentation_training(src, anno, root, scales, multiplicity,
         do_color=False, do_rotate=False)
     ## TODO add option for drawing overlays
-    # impose_overlay(listfile, os.path.join(root, 'anno_cmap'))
+    impose_overlay(listfile, os.path.join(root, 'anno_cmap'))

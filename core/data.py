@@ -804,33 +804,33 @@ def assemble(exp_home, expdirs, writesize, overlap, overlay, area_cutoff,
             cv2.imwrite(reg_name, img)
 
 
-if __name__ == '__main__':
-    import seg_pipeline  # This actually iports this function. idk.
-
-    writeto = '/home/nathan/histo-seg/pca/seg_0.8.1024'
-    sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
-
-    # For multiscale, these aren't needed.
-    weights = 'dummy'
-    model_template = 'dummy'
-    remove = True
-    overlap = 64
-    tilesize = 512
-    writesize = 256
-
-    filename = '/home/nathan/data/pca_wsi/1305400.svs'
-
-    print 'Entering tile procedure...'
-    seg_pipeline.run_multiscale(
-        filename=filename,
-        writeto=writeto,
-        sub_dirs=sub_dirs,
-        tilesize=tilesize,
-        writesize=writesize,
-        weights=weights,
-        model_template=model_template,
-        remove_first=remove,
-        overlap=overlap,
-        nclass=5,
-        whiteidx=3,
-        tileonly=True)
+# if __name__ == '__main__':
+#     import seg_pipeline  # This actually iports this function. idk.
+#
+#     writeto = '/home/nathan/histo-seg/pca/seg_0.8.1024'
+#     sub_dirs = ['tiles', 'result', 'prob0', 'prob1', 'prob2', 'prob3', 'prob4']
+#
+#     # For multiscale, these aren't needed.
+#     weights = 'dummy'
+#     model_template = 'dummy'
+#     remove = True
+#     overlap = 64
+#     tilesize = 512
+#     writesize = 256
+#
+#     filename = '/home/nathan/data/pca_wsi/1305400.svs'
+#
+#     print 'Entering tile procedure...'
+#     seg_pipeline.run_multiscale(
+#         filename=filename,
+#         writeto=writeto,
+#         sub_dirs=sub_dirs,
+#         tilesize=tilesize,
+#         writesize=writesize,
+#         weights=weights,
+#         model_template=model_template,
+#         remove_first=remove,
+#         overlap=overlap,
+#         nclass=5,
+#         whiteidx=3,
+#         tileonly=True)
